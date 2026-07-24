@@ -14,6 +14,7 @@ SmartCare HMS is a full-stack Hospital Management System enhanced with a machine
 ---
 
 ## 📋 Table of Contents
+
 - [Overview](#overview)
 - [Features](#features)
 - [Tech Stack](#tech-stack)
@@ -36,18 +37,21 @@ The AI model is scoped to three common, well-documented conditions — **Heart D
 ## Features
 
 ### 🔑 Admin Module
+
 - Manage doctors (add/edit/delete) and departments
 - View all patients & appointments
 - Monitor AI-flagged high-risk patients
 - Toggle doctor availability
 
 ### 🧑‍⚕️ Doctor Module
+
 - Dashboard filtered to their specialization
 - View only patients matching their predicted disease
 - View patient history & AI risk score
 - Add diagnosis/prescription, mark appointments complete
 
 ### 🧑‍🦰 Patient Module
+
 - Register/login
 - Fill health profile (vitals + symptoms)
 - View AI-predicted disease & risk score
@@ -55,11 +59,13 @@ The AI model is scoped to three common, well-documented conditions — **Heart D
 - Book/view appointments and prescriptions
 
 ### 🤖 AI Prediction Module
+
 - Takes patient vitals & symptoms as input
 - Predicts disease type (Heart Disease / Diabetes / Kidney Disease / Low Risk) with a risk percentage
 - Served as a REST API via Flask
 
 ### 🔀 Doctor-Matching Module
+
 - Maps predicted disease → medical specialization
 - Lists available doctors of that specialization
 - Falls back automatically to a General Physician if none available
@@ -68,15 +74,15 @@ The AI model is scoped to three common, well-documented conditions — **Heart D
 
 ## Tech Stack
 
-| Component | Technology |
-|---|---|
-| Frontend | React.js (HTML, CSS, JavaScript) |
-| Backend | Node.js with Express.js |
-| Database | MongoDB / MySQL |
-| AI / ML Layer | Python (scikit-learn, pandas, NumPy) served via Flask REST API |
-| AI Technique | Multi-class Classification (Random Forest / XGBoost / Logistic Regression) |
-| Version Control | Git & GitHub |
-| Tools | VS Code, Postman, Jupyter Notebook |
+| Component       | Technology                                                                 |
+| --------------- | -------------------------------------------------------------------------- |
+| Frontend        | React.js (HTML, CSS, JavaScript)                                           |
+| Backend         | Node.js with Express.js                                                    |
+| Database        | MongoDB / MySQL                                                            |
+| AI / ML Layer   | Python (scikit-learn, pandas, NumPy) served via Flask REST API             |
+| AI Technique    | Multi-class Classification (Random Forest / XGBoost / Logistic Regression) |
+| Version Control | Git & GitHub                                                               |
+| Tools           | VS Code, Postman, Jupyter Notebook                                         |
 
 ---
 
@@ -121,14 +127,14 @@ smartcare-hms/
 
 ## Database Design (Key Tables)
 
-| Table | Key Fields |
-|---|---|
-| `users` | id, name, email, password, role |
-| `patients` | user_id, age, gender, phone, address, blood_group |
+| Table            | Key Fields                                                                                                       |
+| ---------------- | ---------------------------------------------------------------------------------------------------------------- |
+| `users`          | id, name, email, password, role                                                                                  |
+| `patients`       | user_id, age, gender, phone, address, blood_group                                                                |
 | `health_profile` | patient_id, height, weight, bp_sys, bp_dia, glucose, smoking, family_history, predicted_disease, risk_percentage |
-| `doctors` | user_id, specialization, qualification, experience, fee, is_available |
-| `appointments` | id, patient_id, doctor_id, date, time, status |
-| `prescriptions` | id, appointment_id, doctor_id, diagnosis, medicines, notes |
+| `doctors`        | user_id, specialization, qualification, experience, fee, is_available                                            |
+| `appointments`   | id, patient_id, doctor_id, date, time, status                                                                    |
+| `prescriptions`  | id, appointment_id, doctor_id, diagnosis, medicines, notes                                                       |
 
 ---
 
@@ -136,13 +142,14 @@ smartcare-hms/
 
 **Datasets used:**
 
-| Disease | Dataset |
-|---|---|
-| Heart Disease | UCI Heart Disease Dataset |
-| Diabetes | PIMA Indians Diabetes Dataset |
+| Disease        | Dataset                            |
+| -------------- | ---------------------------------- |
+| Heart Disease  | UCI Heart Disease Dataset          |
+| Diabetes       | PIMA Indians Diabetes Dataset      |
 | Kidney Disease | UCI Chronic Kidney Disease Dataset |
 
 **Approach:**
+
 1. Combine the three datasets into a unified feature set with a common target label: `disease_type`.
 2. Train a multi-class classification model (Random Forest / XGBoost) to predict `disease_type` and its probability (used as risk %).
 3. Expose the trained model as a REST API endpoint (Flask) that the Node backend calls when a patient submits their health profile.
@@ -152,11 +159,13 @@ smartcare-hms/
 ## Getting Started
 
 ### Prerequisites
+
 - Node.js (v18+)
 - Python 3.10+
 - MongoDB or MySQL
 
 ### Backend
+
 ```bash
 cd backend
 npm install
@@ -164,6 +173,7 @@ npm run dev
 ```
 
 ### Frontend
+
 ```bash
 cd frontend
 npm install
@@ -171,6 +181,7 @@ npm start
 ```
 
 ### ML Model API
+
 ```bash
 cd ml-model
 pip install -r requirements.txt
@@ -193,3 +204,24 @@ Copy `.env.example` to `.env` in `backend/` and fill in your database and ML API
 ## License
 
 This project is licensed under the MIT License — see [LICENSE](LICENSE) for details.
+
+## 🚧 Development Progress
+
+| Module                                     | Status         |
+| ------------------------------------------ | -------------- |
+| GitHub repo & project scaffold             | ✅ Done        |
+| Frontend — React + Vite setup              | ✅ Done        |
+| Frontend — Routing & sidebar navigation    | ✅ Done        |
+| Frontend — Login page                      | 🔲 In progress |
+| Frontend — Register page                   | 🔲 Not started |
+| Frontend — Health Profile form             | 🔲 Not started |
+| Frontend — Patient/Doctor/Admin dashboards | 🔲 Not started |
+| Backend — Node.js + Express setup          | 🔲 Not started |
+| Backend — Database schema                  | 🔲 Not started |
+| Backend — Auth APIs                        | 🔲 Not started |
+| ML Model — Training pipeline               | 🔲 Not started |
+| ML Model — Flask API                       | 🔲 Not started |
+
+_Last updated: 25 July 2026_
+
+---
