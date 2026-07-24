@@ -1,0 +1,38 @@
+# --- Node / React ---
+node_modules/
+frontend/build/
+backend/dist/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# --- Environment variables ---
+.env
+.env.local
+.env.*.local
+backend/.env
+ml-model/.env
+
+# --- Python / ML ---
+__pycache__/
+*.py[cod]
+*.pkl
+*.joblib
+.ipynb_checkpoints/
+venv/
+env/
+*.egg-info/
+
+# --- Datasets (keep repo lightweight) ---
+ml-model/data/*.csv
+!ml-model/data/.gitkeep
+
+# --- OS / Editor ---
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+# --- Logs ---
+*.log
+logs/
