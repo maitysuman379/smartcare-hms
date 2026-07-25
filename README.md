@@ -207,21 +207,21 @@ This project is licensed under the MIT License — see [LICENSE](LICENSE) for de
 
 ## 🚧 Development Progress
 
-| Module                                     | Status         |
-| ------------------------------------------ | -------------- |
-| GitHub repo & project scaffold             | ✅ Done        |
-| Frontend — React + Vite setup              | ✅ Done        |
-| Frontend — Routing & sidebar navigation    | ✅ Done        |
-| Frontend — Login page                      | 🔲 In progress |
-| Frontend — Register page                   | 🔲 Not started |
-| Frontend — Health Profile form             | 🔲 Not started |
-| Frontend — Patient/Doctor/Admin dashboards | 🔲 Not started |
-| Backend — Node.js + Express setup          | 🔲 Not started |
-| Backend — Database schema                  | 🔲 Not started |
-| Backend — Auth APIs                        | 🔲 Not started |
-| ML Model — Training pipeline               | 🔲 Not started |
-| ML Model — Flask API                       | 🔲 Not started |
+| Module                                     | Status                                          |
+| ------------------------------------------ | ----------------------------------------------- |
+| GitHub repo & project scaffold             | ✅ Done                                         |
+| Frontend — React + Vite setup              | ✅ Done                                         |
+| Frontend — Routing & sidebar navigation    | ✅ Done                                         |
+| Frontend — Login page                      | ✅ Done (split-screen design + form validation) |
+| Frontend — Register page                   | 🔲 In progress                                  |
+| Frontend — Health Profile form             | 🔲 Not started                                  |
+| Frontend — Patient/Doctor/Admin dashboards | 🔲 Not started                                  |
+| Backend — Node.js + Express setup          | 🔲 Not started                                  |
+| Backend — Database schema                  | 🔲 Not started                                  |
+| Backend — Auth APIs                        | 🔲 Not started                                  |
+| ML Model — Training pipeline               | 🔲 Not started                                  |
+| ML Model — Flask API                       | 🔲 Not started                                  |
 
-_Last updated: 25 July 2026_
+_Last updated: 26 July 2026_
 
 ---
