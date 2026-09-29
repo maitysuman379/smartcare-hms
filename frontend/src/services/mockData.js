@@ -28,24 +28,6 @@ export const matchedDoctor = {
   available: true,
 };
 
-export const appointments = [
-  {
-    id: 1,
-    doctor: "Dr. Anita Verma",
-    specialization: "Endocrinologist",
-    date: "2026-07-29",
-    time: "10:30 AM",
-    status: "Pending",
-  },
-  {
-    id: 2,
-    doctor: "Dr. Rohan Das",
-    specialization: "General Physician",
-    date: "2026-07-15",
-    time: "4:00 PM",
-    status: "Completed",
-  },
-];
 export const currentDoctor = {
   name: "Dr. Anita Verma",
   specialization: "Endocrinologist",
@@ -88,6 +70,7 @@ export const doctorPatients = [
     status: "Completed",
   },
 ];
+
 export const allDoctors = [
   {
     id: 1,
@@ -162,5 +145,46 @@ export const allPatientsOverview = [
     predictedDisease: "Kidney Disease",
     riskLevel: "medium",
     riskPercentage: 58,
+  },
+];
+
+// Single source of truth for appointments — includes the `patient` field
+// so both the Patient Dashboard and Admin Dashboard can use the same data.
+export const appointments = [
+  {
+    id: 1,
+    patient: "Rahul Sharma",
+    doctor: "Dr. Anita Verma",
+    specialization: "Endocrinologist",
+    date: "2026-07-29",
+    time: "10:30 AM",
+    status: "Pending",
+  },
+  {
+    id: 2,
+    patient: "Rahul Sharma",
+    doctor: "Dr. Rohan Das",
+    specialization: "General Physician",
+    date: "2026-07-15",
+    time: "4:00 PM",
+    status: "Completed",
+  },
+  {
+    id: 3,
+    patient: "Priya Nair",
+    doctor: "Dr. Anita Verma",
+    specialization: "Endocrinologist",
+    date: "2026-07-20",
+    time: "11:00 AM",
+    status: "Pending",
+  },
+  {
+    id: 4,
+    patient: "Fatima Sheikh",
+    doctor: "Dr. Meera Iyer",
+    specialization: "Cardiologist",
+    date: "2026-07-18",
+    time: "3:30 PM",
+    status: "Cancelled",
   },
 ];

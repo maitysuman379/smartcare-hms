@@ -2,7 +2,7 @@ import { useState } from "react";
 import {
   allDoctors,
   allPatientsOverview,
-  appointments,
+  appointments as initialAppointments,
 } from "../services/mockData.js";
 
 const emptyDoctorForm = {
@@ -14,6 +14,8 @@ const emptyDoctorForm = {
   available: true,
 };
 
+const statusFilters = ["All", "Pending", "Completed", "Cancelled"];
+
 export default function AdminDashboard() {
   const [doctors, setDoctors] = useState(allDoctors);
   const [showForm, setShowForm] = useState(false);
@@ -21,9 +23,32 @@ export default function AdminDashboard() {
   const [form, setForm] = useState(emptyDoctorForm);
   const [error, setError] = useState("");
 
+  const [appointments, setAppointments] = useState(initialAppointments);
+  const [statusFilter, setStatusFilter] = useState("All");
+
+  const [patientSearch, setPatientSearch] = useState("");
+
   const highRiskPatients = allPatientsOverview.filter(
     (p) => p.riskLevel === "high",
   );
+
+  const filteredAppointments =
+    statusFilter === "All"
+      ? appointments
+      : appointments.filter((a) => a.status === statusFilter);
+
+  const filteredPatients = allPatientsOverview.filter((p) =>
+    p.name.toLowerCase().includes(patientSearch.toLowerCase()),
+  );
+
+  const cancelAppointment = (id) => {
+    const confirmed = window.confirm("Cancel this appointment?");
+    if (confirmed) {
+      setAppointments((prev) =>
+        prev.map((a) => (a.id === id ? { ...a, status: "Cancelled" } : a)),
+      );
+    }
+  };
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -68,12 +93,10 @@ export default function AdminDashboard() {
     }
 
     if (editingId) {
-      // Edit existing doctor
       setDoctors((prev) =>
         prev.map((d) => (d.id === editingId ? { ...d, ...form } : d)),
       );
     } else {
-      // Add new doctor
       const newDoctor = {
         id: Date.now(),
         ...form,
@@ -97,6 +120,12 @@ export default function AdminDashboard() {
     setDoctors((prev) =>
       prev.map((d) => (d.id === id ? { ...d, available: !d.available } : d)),
     );
+  };
+
+  const statusBadgeClass = (status) => {
+    if (status === "Completed") return "badge-low";
+    if (status === "Cancelled") return "badge-high";
+    return "badge-medium";
   };
 
   return (
@@ -321,6 +350,87 @@ export default function AdminDashboard() {
         </table>
       </div>
 
+      {/* All Appointments */}
+      <div className="card" style={{ marginBottom: 20 }}>
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+            marginBottom: 16,
+          }}
+        >
+          <h3>All Appointments</h3>
+          <div className="filter-tabs">
+            {statusFilters.map((status) => (
+              <button
+                key={status}
+                className={
+                  statusFilter === status
+                    ? "filter-tab filter-tab-active"
+                    : "filter-tab"
+                }
+                onClick={() => setStatusFilter(status)}
+              >
+                {status}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {filteredAppointments.length === 0 ? (
+          <p style={{ fontSize: 14, color: "var(--color-ink-soft)" }}>
+            No appointments match this filter.
+          </p>
+        ) : (
+          <table>
+            <thead>
+              <tr>
+                <th>Patient</th>
+                <th>Doctor</th>
+                <th>Specialization</th>
+                <th>Date</th>
+                <th>Time</th>
+                <th>Status</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody>
+              {filteredAppointments.map((a) => (
+                <tr key={a.id}>
+                  <td>{a.patient}</td>
+                  <td>{a.doctor}</td>
+                  <td>{a.specialization}</td>
+                  <td>{a.date}</td>
+                  <td>{a.time}</td>
+                  <td>
+                    <span className={`badge ${statusBadgeClass(a.status)}`}>
+                      {a.status}
+                    </span>
+                  </td>
+                  <td>
+                    {a.status === "Pending" && (
+                      <button
+                        className="btn btn-outline"
+                        style={{
+                          padding: "6px 10px",
+                          fontSize: 12,
+                          color: "var(--color-danger)",
+                          borderColor: "var(--color-danger)",
+                        }}
+                        onClick={() => cancelAppointment(a.id)}
+                      >
+                        Cancel
+                      </button>
+                    )}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
+      </div>
+
       <div
         className="grid grid-2"
         style={{ marginBottom: 20, alignItems: "start" }}
@@ -360,29 +470,53 @@ export default function AdminDashboard() {
 
         {/* All patients overview */}
         <div className="card">
-          <h3 style={{ marginBottom: 16 }}>All Patients Overview</h3>
-          <table>
-            <thead>
-              <tr>
-                <th>Patient</th>
-                <th>Condition</th>
-                <th>Risk</th>
-              </tr>
-            </thead>
-            <tbody>
-              {allPatientsOverview.map((p) => (
-                <tr key={p.id}>
-                  <td>{p.name}</td>
-                  <td>{p.predictedDisease}</td>
-                  <td>
-                    <span className={`badge badge-${p.riskLevel}`}>
-                      {p.riskPercentage}%
-                    </span>
-                  </td>
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+              marginBottom: 16,
+              gap: 12,
+            }}
+          >
+            <h3>All Patients Overview</h3>
+            <input
+              type="text"
+              placeholder="Search by name..."
+              value={patientSearch}
+              onChange={(e) => setPatientSearch(e.target.value)}
+              style={{ maxWidth: 200 }}
+            />
+          </div>
+
+          {filteredPatients.length === 0 ? (
+            <p style={{ fontSize: 14, color: "var(--color-ink-soft)" }}>
+              No patients match "{patientSearch}".
+            </p>
+          ) : (
+            <table>
+              <thead>
+                <tr>
+                  <th>Patient</th>
+                  <th>Condition</th>
+                  <th>Risk</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {filteredPatients.map((p) => (
+                  <tr key={p.id}>
+                    <td>{p.name}</td>
+                    <td>{p.predictedDisease}</td>
+                    <td>
+                      <span className={`badge badge-${p.riskLevel}`}>
+                        {p.riskPercentage}%
+                      </span>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
         </div>
       </div>
 
@@ -393,6 +527,26 @@ export default function AdminDashboard() {
           border-radius: var(--radius-md);
           padding: 20px;
           margin-bottom: 20px;
+        }
+        .filter-tabs {
+          display: flex;
+          gap: 6px;
+        }
+        .filter-tab {
+          padding: 6px 14px;
+          border-radius: 999px;
+          border: 1px solid var(--color-line);
+          background: white;
+          font-size: 13px;
+          font-weight: 600;
+          color: var(--color-ink-soft);
+          cursor: pointer;
+        }
+        .filter-tab:hover { border-color: var(--color-primary); }
+        .filter-tab-active {
+          background: var(--color-primary-soft);
+          border-color: var(--color-primary);
+          color: var(--color-primary);
         }
       `}</style>
     </div>

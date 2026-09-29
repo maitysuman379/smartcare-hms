@@ -1,12 +1,45 @@
+import { useState } from "react";
 import {
   currentPatient,
   healthProfile,
   aiPrediction,
   matchedDoctor,
-  appointments,
+  appointments as initialAppointments,
 } from "../services/mockData.js";
 
 export default function PatientDashboard() {
+  const [appointments, setAppointments] = useState(initialAppointments);
+  const [showBookingForm, setShowBookingForm] = useState(false);
+  const [bookingForm, setBookingForm] = useState({ date: "", time: "" });
+  const [error, setError] = useState("");
+
+  const handleBookingChange = (e) => {
+    setBookingForm({ ...bookingForm, [e.target.name]: e.target.value });
+  };
+
+  const handleBookingSubmit = (e) => {
+    e.preventDefault();
+    setError("");
+
+    if (!bookingForm.date || !bookingForm.time) {
+      setError("Please select both a date and a time.");
+      return;
+    }
+
+    const newAppointment = {
+      id: Date.now(),
+      doctor: matchedDoctor.name,
+      specialization: matchedDoctor.specialization,
+      date: bookingForm.date,
+      time: bookingForm.time,
+      status: "Pending",
+    };
+
+    setAppointments((prev) => [newAppointment, ...prev]);
+    setShowBookingForm(false);
+    setBookingForm({ date: "", time: "" });
+  };
+
   return (
     <div>
       <div className="page-header">
@@ -64,17 +97,72 @@ export default function PatientDashboard() {
             style={{
               fontSize: 14,
               color: "var(--color-ink-soft)",
-              marginBottom: 10,
+              marginBottom: 14,
             }}
           >
             {matchedDoctor.specialization} · {matchedDoctor.experience}{" "}
             experience
           </p>
-          <span
-            className={`badge ${matchedDoctor.available ? "badge-low" : "badge-medium"}`}
-          >
-            {matchedDoctor.available ? "Available" : "Unavailable"}
-          </span>
+          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+            <span
+              className={`badge ${matchedDoctor.available ? "badge-low" : "badge-medium"}`}
+            >
+              {matchedDoctor.available ? "Available" : "Unavailable"}
+            </span>
+            {matchedDoctor.available && !showBookingForm && (
+              <button
+                className="btn btn-primary"
+                onClick={() => setShowBookingForm(true)}
+              >
+                Book Appointment
+              </button>
+            )}
+          </div>
+
+          {showBookingForm && (
+            <form onSubmit={handleBookingSubmit} className="booking-form">
+              <div className="grid grid-2">
+                <div className="form-row">
+                  <label htmlFor="date">Date</label>
+                  <input
+                    id="date"
+                    name="date"
+                    type="date"
+                    value={bookingForm.date}
+                    onChange={handleBookingChange}
+                  />
+                </div>
+                <div className="form-row">
+                  <label htmlFor="time">Time</label>
+                  <input
+                    id="time"
+                    name="time"
+                    type="time"
+                    value={bookingForm.time}
+                    onChange={handleBookingChange}
+                  />
+                </div>
+              </div>
+
+              {error && <p className="auth-error">{error}</p>}
+
+              <div style={{ display: "flex", gap: 10 }}>
+                <button type="submit" className="btn btn-primary">
+                  Confirm Booking
+                </button>
+                <button
+                  type="button"
+                  className="btn btn-outline"
+                  onClick={() => {
+                    setShowBookingForm(false);
+                    setError("");
+                  }}
+                >
+                  Cancel
+                </button>
+              </div>
+            </form>
+          )}
         </div>
       </div>
 
@@ -159,6 +247,14 @@ export default function PatientDashboard() {
           </tbody>
         </table>
       </div>
+
+      <style>{`
+        .booking-form {
+          margin-top: 16px;
+          padding-top: 16px;
+          border-top: 1px solid var(--color-line);
+        }
+      `}</style>
     </div>
   );
 }
