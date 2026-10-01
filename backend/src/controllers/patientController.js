@@ -5,6 +5,8 @@ const {
   updatePatient,
 } = require("../models/patientModel");
 
+const db = require("../config/db");
+
 // Get all patients
 const getPatients = async (req, res) => {
   try {
@@ -20,6 +22,57 @@ const getPatients = async (req, res) => {
     res.status(500).json({
       success: false,
       message: "Failed to fetch patients",
+      error: error.message,
+    });
+  }
+};
+
+// Get logged-in patient's profile
+const getMyPatient = async (req, res) => {
+  try {
+    const userId = req.user.id;
+
+    const [rows] = await db.execute(
+      `
+      SELECT
+        id,
+        user_id,
+        patient_code,
+        name,
+        email,
+        phone,
+        date_of_birth,
+        gender,
+        blood_group,
+        address,
+        emergency_contact_name,
+        emergency_contact_phone,
+        height_cm,
+        weight_kg
+      FROM patients
+      WHERE user_id = ?
+      LIMIT 1
+      `,
+      [userId],
+    );
+
+    if (rows.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: "Patient profile not found",
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      patient: rows[0],
+    });
+  } catch (error) {
+    console.error("Get my patient error:", error);
+
+    res.status(500).json({
+      success: false,
+      message: "Failed to fetch patient profile",
       error: error.message,
     });
   }
@@ -243,6 +296,7 @@ const editPatient = async (req, res) => {
 module.exports = {
   getPatients,
   getPatient,
+  getMyPatient,
   addPatient,
   editPatient,
 };

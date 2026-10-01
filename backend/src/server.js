@@ -20,6 +20,8 @@ const labOrderRoutes = require("./routes/labOrderRoutes");
 const labReportRoutes = require("./routes/labReportRoutes");
 const billRoutes = require("./routes/billRoutes");
 const notificationRoutes = require("./routes/notificationRoutes");
+const aiRoutes = require("./routes/aiRoutes");
+const aiPatientVitalsRoutes = require("./routes/aiPatientVitalsRoutes");
 
 const app = express();
 
@@ -160,6 +162,18 @@ app.use("/api/bills", billRoutes);
 // ========================================
 
 app.use("/api/notifications", notificationRoutes);
+
+// ========================================
+// AI Routes
+// ========================================
+
+app.use("/api/ai", aiRoutes);
+
+// ========================================
+// AI/vitals Routes
+// ========================================
+
+app.use("/api/ai/vitals", aiPatientVitalsRoutes);
 
 // ========================================
 // 404 - Route Not Found

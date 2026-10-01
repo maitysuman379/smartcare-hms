@@ -7,6 +7,8 @@ const {
   createUser,
 } = require("../models/userModel");
 
+const { createPatient } = require("../models/patientModel");
+
 // ================================
 // REGISTER
 // ================================
@@ -64,13 +66,34 @@ const register = async (req, res) => {
       });
     }
 
-    // Create user
+    // ================================
+    // CREATE USER
+    // ================================
+
     const userId = await createUser({
       username,
       email,
       passwordHash,
       role: userRole,
     });
+
+    // ================================
+    // CREATE PATIENT PROFILE
+    // ================================
+    // Only PATIENT users need a patient profile
+
+    if (userRole === "PATIENT") {
+      await createPatient({
+        user_id: userId,
+        patient_code: `PAT-${userId}`,
+        name: username,
+        email,
+      });
+    }
+
+    // ================================
+    // SUCCESS RESPONSE
+    // ================================
 
     res.status(201).json({
       success: true,
@@ -101,6 +124,7 @@ const login = async (req, res) => {
   try {
     const { email, password } = req.body;
 
+    // Validate required fields
     if (!email || !password) {
       return res.status(400).json({
         success: false,
@@ -108,7 +132,10 @@ const login = async (req, res) => {
       });
     }
 
-    // Find user
+    // ================================
+    // FIND USER
+    // ================================
+
     const user = await findUserByEmail(email);
 
     if (!user) {
@@ -118,7 +145,10 @@ const login = async (req, res) => {
       });
     }
 
-    // Check account status
+    // ================================
+    // CHECK ACCOUNT STATUS
+    // ================================
+
     if (user.status !== "ACTIVE") {
       return res.status(403).json({
         success: false,
@@ -126,7 +156,10 @@ const login = async (req, res) => {
       });
     }
 
-    // Compare password
+    // ================================
+    // CHECK PASSWORD
+    // ================================
+
     const passwordMatch = await bcrypt.compare(password, user.password_hash);
 
     if (!passwordMatch) {
@@ -136,7 +169,10 @@ const login = async (req, res) => {
       });
     }
 
-    // Create JWT
+    // ================================
+    // CREATE JWT
+    // ================================
+
     const token = jwt.sign(
       {
         id: user.id,
@@ -149,6 +185,10 @@ const login = async (req, res) => {
         expiresIn: "1d",
       },
     );
+
+    // ================================
+    // LOGIN SUCCESS
+    // ================================
 
     res.json({
       success: true,
@@ -171,6 +211,10 @@ const login = async (req, res) => {
     });
   }
 };
+
+// ================================
+// EXPORT
+// ================================
 
 module.exports = {
   register,

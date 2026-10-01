@@ -6,11 +6,16 @@ const authorizeRoles = require("../middleware/roleMiddleware");
 const {
   getPatients,
   getPatient,
+  getMyPatient,
   addPatient,
   editPatient,
 } = require("../controllers/patientController");
 
 const router = express.Router();
+
+// Get logged-in patient's own profile
+// IMPORTANT: This must come before /:id
+router.get("/me", authMiddleware, getMyPatient);
 
 // Get all patients
 router.get("/", authMiddleware, getPatients);
