@@ -1,16 +1,18 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
+import { loginUser, saveAuth } from "../services/api.js";
 
 export default function Login() {
   const navigate = useNavigate();
   const [form, setForm] = useState({ email: "", password: "" });
   const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
 
   const handleChange = (e) => {
     setForm({ ...form, [e.target.name]: e.target.value });
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     setError("");
 
@@ -19,9 +21,28 @@ export default function Login() {
       return;
     }
 
-    // TODO: replace with a real API call once the backend exists.
-    console.log("Login attempt:", form);
-    navigate("/patient/dashboard");
+    setLoading(true);
+    try {
+      const data = await loginUser({
+        email: form.email,
+        password: form.password,
+      });
+      saveAuth({ token: data.token, user: data.user });
+
+      // Redirect based on the role the backend returned
+      const role = data.user.role;
+      if (role === "ADMIN") {
+        navigate("/admin/dashboard");
+      } else if (role === "DOCTOR") {
+        navigate("/doctor/dashboard");
+      } else {
+        navigate("/patient/dashboard");
+      }
+    } catch (err) {
+      setError(err.message || "Login failed. Please try again.");
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -96,8 +117,12 @@ export default function Login() {
 
             {error && <p className="auth-error">{error}</p>}
 
-            <button type="submit" className="btn btn-primary auth-submit">
-              Log in
+            <button
+              type="submit"
+              className="btn btn-primary auth-submit"
+              disabled={loading}
+            >
+              {loading ? "Logging in..." : "Log in"}
             </button>
           </form>
 
@@ -113,7 +138,6 @@ export default function Login() {
           display: flex;
         }
 
-        /* ---- Left brand panel ---- */
         .auth-panel {
           flex: 1;
           max-width: 480px;
@@ -188,7 +212,6 @@ export default function Login() {
           color: rgba(255,255,255,0.7);
         }
 
-        /* ---- Right form side (now with its own subtle background) ---- */
         .auth-form-side {
           flex: 1;
           display: flex;
@@ -202,7 +225,7 @@ export default function Login() {
           content: '';
           position: absolute;
           inset: 0;
-          background: rgba(245, 248, 247, .1);
+          background: rgba(245, 248, 247, 0.55);
         }
         .auth-form-side .auth-card {
           position: relative;
@@ -237,6 +260,7 @@ export default function Login() {
         .auth-forgot:hover { text-decoration: underline; }
 
         .auth-submit { width: 100%; margin-top: 8px; }
+        .auth-submit:disabled { opacity: 0.7; cursor: not-allowed; }
 
         .auth-error {
           color: var(--color-danger);

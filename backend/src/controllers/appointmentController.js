@@ -1,3 +1,5 @@
+const db = require("../config/db");
+
 const {
   getAllAppointments,
   getAppointmentById,
@@ -58,9 +60,39 @@ const getAppointment = async (req, res) => {
 };
 
 // Get appointments by patient
+// Get appointments by patient
 const getPatientAppointments = async (req, res) => {
   try {
     const { patientId } = req.params;
+
+    // Patients can only view their own appointments
+    if (req.user.role === "PATIENT") {
+      const [rows] = await db.execute(
+        `
+        SELECT id
+        FROM patients
+        WHERE user_id = ?
+        LIMIT 1
+        `,
+        [req.user.id],
+      );
+
+      if (rows.length === 0) {
+        return res.status(404).json({
+          success: false,
+          message: "Patient profile not found",
+        });
+      }
+
+      const loggedInPatientId = rows[0].id;
+
+      if (Number(patientId) !== Number(loggedInPatientId)) {
+        return res.status(403).json({
+          success: false,
+          message: "Access denied",
+        });
+      }
+    }
 
     const appointments = await getAppointmentsByPatientId(patientId);
 

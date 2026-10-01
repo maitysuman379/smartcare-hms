@@ -27,11 +27,11 @@ router.get("/doctor/:doctorId", authMiddleware, getDoctorAppointments);
 // Get appointment by ID
 router.get("/:id", authMiddleware, getAppointment);
 
-// Create appointment - ADMIN or RECEPTIONIST
+// Create appointment - ADMIN, RECEPTIONIST or PATIENT
 router.post(
   "/",
   authMiddleware,
-  authorizeRoles("ADMIN", "RECEPTIONIST"),
+  authorizeRoles("ADMIN", "RECEPTIONIST", "PATIENT"),
   addAppointment,
 );
 

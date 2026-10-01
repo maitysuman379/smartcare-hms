@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
+import { registerUser } from "../services/api.js";
 
 export default function Register() {
   const navigate = useNavigate();
@@ -11,12 +12,13 @@ export default function Register() {
     role: "patient",
   });
   const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
 
   const handleChange = (e) => {
     setForm({ ...form, [e.target.name]: e.target.value });
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     setError("");
 
@@ -30,9 +32,20 @@ export default function Register() {
       return;
     }
 
-    // TODO: replace with a real API call once the backend exists.
-    console.log("Register attempt:", form);
-    navigate("/login");
+    setLoading(true);
+    try {
+      await registerUser({
+        username: form.name,
+        email: form.email,
+        password: form.password,
+        role: form.role.toUpperCase(), // backend expects "PATIENT" / "DOCTOR" / "ADMIN"
+      });
+      navigate("/login");
+    } catch (err) {
+      setError(err.message || "Registration failed. Please try again.");
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -141,8 +154,12 @@ export default function Register() {
 
             {error && <p className="auth-error">{error}</p>}
 
-            <button type="submit" className="btn btn-primary auth-submit">
-              Create account
+            <button
+              type="submit"
+              className="btn btn-primary auth-submit"
+              disabled={loading}
+            >
+              {loading ? "Creating account..." : "Create account"}
             </button>
           </form>
 
@@ -174,7 +191,7 @@ export default function Register() {
           content: '';
           position: absolute;
           inset: 0;
-          background: linear-gradient(160deg, rgba(69, 142, 148, 0.92), rgba(12,68,72,0.96));
+          background: linear-gradient(160deg, rgba(15,82,87,0.92), rgba(12,68,72,0.96));
         }
         .auth-panel > * { position: relative; z-index: 1; }
 
@@ -232,7 +249,6 @@ export default function Register() {
           color: rgba(255,255,255,0.7);
         }
 
-        /* ---- Right form side (with its own subtle background) ---- */
         .auth-form-side {
           flex: 1;
           display: flex;
@@ -246,7 +262,7 @@ export default function Register() {
           content: '';
           position: absolute;
           inset: 0;
-          background: rgba(245, 248, 247, 0.12);
+          background: rgba(245, 248, 247, 0.55);
         }
         .auth-form-side .auth-card {
           position: relative;
@@ -268,6 +284,7 @@ export default function Register() {
         .auth-page .page-subtitle { margin-bottom: 26px; }
 
         .auth-submit { width: 100%; margin-top: 8px; }
+        .auth-submit:disabled { opacity: 0.7; cursor: not-allowed; }
 
         .auth-error {
           color: var(--color-danger);
