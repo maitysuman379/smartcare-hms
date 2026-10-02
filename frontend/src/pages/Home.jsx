@@ -392,6 +392,19 @@ export default function Home() {
                     Dashboard
                   </button>
 
+                  {user.role === "PATIENT" && (
+                    <Link
+                      to="/patient/health-profile"
+                      onClick={() => setProfileOpen(false)}
+                    >
+                      Health Profile
+                    </Link>
+                  )}
+
+                  <Link to="/profile" onClick={() => setProfileOpen(false)}>
+                    My Profile
+                  </Link>
+
                   <button type="button" onClick={handleLogout}>
                     Log out
                   </button>
@@ -1783,29 +1796,45 @@ export default function Home() {
           color: var(--color-ink-soft);
         }
 
-        .profile-dropdown button {
-          width: 100%;
+        .profile-dropdown button,
+.profile-dropdown a {
+  display: block;
 
-          border: 0;
+  width: 100%;
 
-          background: transparent;
+  border: 0;
 
-          padding: 10px;
+  background: transparent;
 
-          text-align: left;
+  padding: 10px;
 
-          border-radius: 8px;
+  margin: 0;
 
-          cursor: pointer;
+  box-sizing: border-box;
 
-          font-size: 13px;
-        }
+  text-align: left;
 
-        .profile-dropdown button:hover {
-          background: var(--color-primary-soft);
+  text-decoration: none;
 
-          color: var(--color-primary);
-        }
+  border-radius: 8px;
+
+  cursor: pointer;
+
+  font-size: 13px;
+
+  font-family: inherit;
+
+  color: var(--color-ink);
+}
+
+.profile-dropdown button:hover,
+.profile-dropdown a:hover {
+  background: var(--color-primary-soft);
+
+  color: var(--color-primary);
+
+  text-decoration: none;
+}
 
         /* =====================================================
            HAMBURGER
