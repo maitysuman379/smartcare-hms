@@ -438,13 +438,25 @@ export default function Home() {
           </p>
 
           <div className="home-hero-actions">
-            <Link to="/register" className="btn btn-primary btn-lg">
-              Get Started
-            </Link>
+            {!user ? (
+              <>
+                <Link to="/register" className="btn btn-primary btn-lg">
+                  Get Started
+                </Link>
 
-            <Link to="/login" className="btn btn-ghost btn-lg">
-              Log in
-            </Link>
+                <Link to="/login" className="btn btn-ghost btn-lg">
+                  Log in
+                </Link>
+              </>
+            ) : (
+              <button
+                type="button"
+                className="btn btn-primary btn-lg"
+                onClick={() => navigate("/patient/health-profile")}
+              >
+                Get Started
+              </button>
+            )}
           </div>
 
           <div className="home-hero-stats">
