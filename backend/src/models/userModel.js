@@ -31,8 +31,99 @@ const createUser = async (userData) => {
   return result.insertId;
 };
 
+/*
+ * Get logged-in user's profile
+ */
+const getUserProfileById = async (userId) => {
+  const [rows] = await pool.query(
+    `
+    SELECT
+      id,
+      username,
+      email,
+      profile_image,
+      phone,
+      date_of_birth,
+      gender,
+      address,
+      city,
+      state,
+      pincode,
+      emergency_contact_name,
+      emergency_contact_phone,
+      emergency_contact_relation,
+      role,
+      status,
+      created_at,
+      updated_at
+    FROM users
+    WHERE id = ?
+    LIMIT 1
+    `,
+    [userId],
+  );
+
+  return rows[0];
+};
+
+/*
+ * Update logged-in user's profile
+ */
+const updateUserProfile = async (userId, profileData) => {
+  const {
+    username,
+    phone,
+    date_of_birth,
+    gender,
+    address,
+    city,
+    state,
+    pincode,
+    emergency_contact_name,
+    emergency_contact_phone,
+    emergency_contact_relation,
+  } = profileData;
+
+  const [result] = await pool.query(
+    `
+    UPDATE users
+    SET
+      username = ?,
+      phone = ?,
+      date_of_birth = ?,
+      gender = ?,
+      address = ?,
+      city = ?,
+      state = ?,
+      pincode = ?,
+      emergency_contact_name = ?,
+      emergency_contact_phone = ?,
+      emergency_contact_relation = ?
+    WHERE id = ?
+    `,
+    [
+      username,
+      phone,
+      date_of_birth,
+      gender,
+      address,
+      city,
+      state,
+      pincode,
+      emergency_contact_name,
+      emergency_contact_phone,
+      emergency_contact_relation,
+      userId,
+    ],
+  );
+
+  return result;
+};
+
 module.exports = {
   findUserByEmail,
   findUserByUsername,
   createUser,
+  getUserProfileById,
+  updateUserProfile,
 };
