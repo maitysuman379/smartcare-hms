@@ -770,6 +770,8 @@ export default function Home() {
             <strong>Phone</strong>
 
             <p>+91 8967333550</p>
+            <hr />
+            <p>+91 8145508186</p>
           </div>
 
           <div className="home-contact-card">
@@ -778,6 +780,8 @@ export default function Home() {
             <strong>Email</strong>
 
             <p>smartcarehms@gmail.com</p>
+            <hr />
+            <p>devsuman.in@gmail.com</p>
           </div>
 
           <div className="home-contact-card">
@@ -785,10 +789,12 @@ export default function Home() {
 
             <strong>Address</strong>
 
+            <p>SmartCare HMS</p>
+            <hr />
             <p>
-              SmartCare HMS, Haldia Institute of Technology, ICARE Complex,
-              Hatiberia, Kshudiram Nagar, Haldia, Purba Medinipur, West Bengal,
-              India.
+              {" "}
+              Haldia Institute of Technology, ICARE Complex, Haldia, Purba
+              Medinipur, West Bengal, India.
             </p>
           </div>
         </div>
