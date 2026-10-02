@@ -1,24 +1,41 @@
 import { NavLink } from "react-router-dom";
-
-const navSections = [
-  {
-    label: "Patient",
-    links: [
-      { to: "/patient/health-profile", label: "Health Profile" },
-      { to: "/patient/dashboard", label: "My Dashboard" },
-    ],
-  },
-  {
-    label: "Doctor",
-    links: [{ to: "/doctor/dashboard", label: "Doctor Dashboard" }],
-  },
-  {
-    label: "Admin",
-    links: [{ to: "/admin/dashboard", label: "Admin Dashboard" }],
-  },
-];
+import { getCurrentUser, logout } from "../services/api.js";
 
 export default function Sidebar() {
+  const user = getCurrentUser();
+  const role = user?.role;
+
+  const navSections = [];
+
+  if (role === "PATIENT") {
+    navSections.push({
+      label: "Patient",
+      links: [
+        { to: "/patient/health-profile", label: "Health Profile" },
+        { to: "/patient/dashboard", label: "My Dashboard" },
+      ],
+    });
+  }
+
+  if (role === "DOCTOR") {
+    navSections.push({
+      label: "Doctor",
+      links: [{ to: "/doctor/dashboard", label: "Doctor Dashboard" }],
+    });
+  }
+
+  if (role === "ADMIN") {
+    navSections.push({
+      label: "Admin",
+      links: [{ to: "/admin/dashboard", label: "Admin Dashboard" }],
+    });
+  }
+
+  const handleLogout = () => {
+    logout();
+    window.location.href = "/login";
+  };
+
   return (
     <aside className="sidebar">
       <div className="sidebar-brand">
@@ -30,6 +47,7 @@ export default function Sidebar() {
         {navSections.map((section) => (
           <div key={section.label} className="sidebar-section">
             <div className="sidebar-section-label">{section.label}</div>
+
             {section.links.map((link) => (
               <NavLink
                 key={link.to}
@@ -46,9 +64,13 @@ export default function Sidebar() {
       </nav>
 
       <div className="sidebar-footer">
-        <NavLink to="/login" className="sidebar-link">
+        <button
+          type="button"
+          className="sidebar-link sidebar-logout"
+          onClick={handleLogout}
+        >
           Log out
-        </NavLink>
+        </button>
       </div>
 
       <style>{`
@@ -60,6 +82,7 @@ export default function Sidebar() {
           display: flex;
           flex-direction: column;
         }
+
         .sidebar-brand {
           display: flex;
           align-items: center;
@@ -70,6 +93,7 @@ export default function Sidebar() {
           padding: 0 8px 24px;
           color: var(--color-primary);
         }
+
         .sidebar-mark {
           width: 28px;
           height: 28px;
@@ -81,8 +105,15 @@ export default function Sidebar() {
           justify-content: center;
           font-weight: 800;
         }
-        .sidebar-nav { flex: 1; }
-        .sidebar-section { margin-bottom: 20px; }
+
+        .sidebar-nav {
+          flex: 1;
+        }
+
+        .sidebar-section {
+          margin-bottom: 20px;
+        }
+
         .sidebar-section-label {
           font-size: 11px;
           text-transform: uppercase;
@@ -92,27 +123,52 @@ export default function Sidebar() {
           padding: 0 8px;
           margin-bottom: 6px;
         }
+
         .sidebar-link {
           display: block;
+          width: 100%;
+          box-sizing: border-box;
           padding: 9px 10px;
+          border: none;
           border-radius: 8px;
+          font-family: inherit;
           font-size: 14px;
           font-weight: 500;
           color: var(--color-ink-soft);
           text-decoration: none;
+          background: transparent;
+          text-align: left;
+          cursor: pointer;
         }
-        .sidebar-link:hover { background: var(--color-bg); color: var(--color-ink); }
+
+        .sidebar-link:hover {
+          background: var(--color-bg);
+          color: var(--color-ink);
+        }
+
         .sidebar-link-active {
           background: var(--color-primary-soft);
           color: var(--color-primary);
           font-weight: 700;
         }
+
         .sidebar-footer {
           border-top: 1px solid var(--color-line);
           padding-top: 12px;
         }
+
+        .sidebar-logout {
+          color: var(--color-danger);
+        }
+
+        .sidebar-logout:hover {
+          color: var(--color-danger);
+        }
+
         @media (max-width: 900px) {
-          .sidebar { display: none; }
+          .sidebar {
+            display: none;
+          }
         }
       `}</style>
     </aside>

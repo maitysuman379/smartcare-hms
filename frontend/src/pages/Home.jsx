@@ -1,5 +1,7 @@
-import { Link } from "react-router-dom";
+import { useState } from "react";
+import { Link, useNavigate } from "react-router-dom";
 import { allDoctors } from "../services/mockData.js";
+import { getCurrentUser, logout } from "../services/api.js";
 
 const services = [
   {
@@ -33,6 +35,32 @@ const steps = [
 ];
 
 export default function Home() {
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [profileOpen, setProfileOpen] = useState(false);
+
+  const navigate = useNavigate();
+  const user = getCurrentUser();
+
+  const handleLogout = () => {
+    logout();
+    setProfileOpen(false);
+    setMobileMenuOpen(false);
+    navigate("/");
+  };
+
+  const handleDashboard = () => {
+    setProfileOpen(false);
+    setMobileMenuOpen(false);
+
+    if (user?.role === "ADMIN") {
+      navigate("/admin/dashboard");
+    } else if (user?.role === "DOCTOR") {
+      navigate("/doctor/dashboard");
+    } else if (user?.role === "PATIENT") {
+      navigate("/patient/dashboard");
+    }
+  };
+
   return (
     <div className="home-page">
       {/* Navbar */}
@@ -41,19 +69,114 @@ export default function Home() {
           <span className="auth-mark">+</span>
           <span>SmartCare HMS</span>
         </div>
-        <nav className="home-nav-links">
-          <a href="#services">Services</a>
-          <a href="#how">How it works</a>
-          <a href="#doctors">Doctors</a>
-          <a href="#contact">Contact</a>
+
+        {/* Desktop navigation */}
+        <nav
+          className={`home-nav-links ${
+            mobileMenuOpen ? "home-nav-links-open" : ""
+          }`}
+        >
+          <a href="#services" onClick={() => setMobileMenuOpen(false)}>
+            Services
+          </a>
+
+          <a href="#how" onClick={() => setMobileMenuOpen(false)}>
+            How it works
+          </a>
+
+          <a href="#doctors" onClick={() => setMobileMenuOpen(false)}>
+            Doctors
+          </a>
+
+          <a href="#contact" onClick={() => setMobileMenuOpen(false)}>
+            Contact
+          </a>
+
+          {/* Mobile-only authentication links */}
+          {!user && (
+            <>
+              <Link to="/login" onClick={() => setMobileMenuOpen(false)}>
+                Log in
+              </Link>
+
+              <Link to="/register" onClick={() => setMobileMenuOpen(false)}>
+                Register
+              </Link>
+            </>
+          )}
+
+          {user && (
+            <button
+              type="button"
+              className="mobile-dashboard-link"
+              onClick={handleDashboard}
+            >
+              Dashboard
+            </button>
+          )}
         </nav>
+
         <div className="home-nav-actions">
-          <Link to="/login" className="btn btn-outline">
-            Log in
-          </Link>
-          <Link to="/register" className="btn btn-primary">
-            Register
-          </Link>
+          {!user ? (
+            <>
+              <Link to="/login" className="btn btn-outline">
+                Log in
+              </Link>
+
+              <Link to="/register" className="btn btn-primary">
+                Register
+              </Link>
+            </>
+          ) : (
+            <div className="profile-menu">
+              <button
+                type="button"
+                className="profile-button"
+                onClick={() => {
+                  setProfileOpen((prev) => !prev);
+                  setMobileMenuOpen(false);
+                }}
+                aria-label="Open profile menu"
+              >
+                <span className="profile-icon">
+                  {user.username?.charAt(0).toUpperCase() || "U"}
+                </span>
+              </button>
+
+              {profileOpen && (
+                <div className="profile-dropdown">
+                  <div className="profile-info">
+                    <strong>{user.username}</strong>
+                    <span>{user.role}</span>
+                  </div>
+
+                  <button type="button" onClick={handleDashboard}>
+                    Dashboard
+                  </button>
+
+                  <button type="button" onClick={handleLogout}>
+                    Log out
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Mobile hamburger */}
+          <button
+            type="button"
+            className="hamburger-button"
+            onClick={() => {
+              setMobileMenuOpen((prev) => !prev);
+              setProfileOpen(false);
+            }}
+            aria-label="Toggle navigation menu"
+            aria-expanded={mobileMenuOpen}
+          >
+            <span></span>
+            <span></span>
+            <span></span>
+          </button>
         </div>
       </header>
 
@@ -504,9 +627,211 @@ export default function Home() {
         }
         .home-footer .home-nav-brand { justify-content: center; }
 
-        @media (max-width: 860px) {
-          .home-nav { padding: 14px 20px; }
-          .home-nav-links { display: none; }
+        /* ---- Profile ---- */
+
+.profile-menu {
+  position: relative;
+}
+
+.profile-button {
+  width: 40px;
+  height: 40px;
+  border: 1px solid var(--color-line);
+  border-radius: 50%;
+  background: white;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+}
+
+.profile-icon {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: var(--color-primary);
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 800;
+  font-size: 14px;
+}
+
+.profile-dropdown {
+  position: absolute;
+  top: calc(100% + 10px);
+  right: 0;
+  width: 190px;
+  background: white;
+  border: 1px solid var(--color-line);
+  border-radius: 12px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.12);
+  padding: 10px;
+  z-index: 100;
+}
+
+.profile-info {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  padding: 10px;
+  border-bottom: 1px solid var(--color-line);
+  margin-bottom: 6px;
+}
+
+.profile-info strong {
+  font-size: 14px;
+  color: var(--color-ink);
+}
+
+.profile-info span {
+  font-size: 11px;
+  color: var(--color-ink-soft);
+}
+
+.profile-dropdown button {
+  width: 100%;
+  border: 0;
+  background: transparent;
+  padding: 10px;
+  text-align: left;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 13px;
+}
+
+.profile-dropdown button:hover {
+  background: var(--color-primary-soft);
+  color: var(--color-primary);
+}
+
+.hamburger-button {
+  display: none;
+  width: 40px;
+  height: 40px;
+  border: 1px solid var(--color-line);
+  border-radius: 8px;
+  background: white;
+  cursor: pointer;
+  padding: 8px;
+  flex-direction: column;
+  justify-content: center;
+  gap: 5px;
+}
+
+.hamburger-button span {
+  display: block;
+  width: 100%;
+  height: 2px;
+  background: var(--color-primary);
+  border-radius: 2px;
+}
+
+.mobile-dashboard-link {
+  display: none;
+}
+
+/* ---- Responsive Navbar ---- */
+
+@media (max-width: 860px) {
+  .home-nav {
+    padding: 14px 20px;
+    position: relative;
+  }
+
+  .home-nav-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  /* Hide desktop auth buttons */
+  .home-nav-actions > .btn {
+    display: none;
+  }
+
+  /* Show hamburger */
+  .hamburger-button {
+    display: flex;
+  }
+
+  /* Mobile navigation menu */
+  .home-nav-links {
+    display: none;
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    flex-direction: column;
+    gap: 0;
+    background: white;
+    border-bottom: 1px solid var(--color-line);
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.08);
+    padding: 10px 20px;
+  }
+
+  .home-nav-links.home-nav-links-open {
+    display: flex;
+  }
+
+  .home-nav-links a,
+  .home-nav-links button {
+    width: 100%;
+    padding: 14px 4px;
+    border-bottom: 1px solid var(--color-line);
+    text-align: left;
+  }
+
+  .home-nav-links a:last-child {
+    border-bottom: none;
+  }
+
+  .home-nav-links .mobile-dashboard-link {
+    display: block;
+    border: 0;
+    background: transparent;
+    color: var(--color-ink-soft);
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+  }
+
+  /* Logged-in profile remains visible */
+  .profile-menu {
+    display: block;
+  }
+
+  .home-hero {
+    padding: 80px 24px 60px;
+  }
+
+  .home-hero-text h1 {
+    font-size: 30px;
+  }
+
+  .home-hero-stats {
+    gap: 28px;
+    flex-wrap: wrap;
+  }
+
+  .home-steps {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .home-step-connector {
+    display: none;
+  }
+
+  .home-contact {
+    grid-template-columns: 1fr;
+  }
+
+  .home-section {
+    padding: 48px 20px;
+  }
+}
           .home-hero { padding: 80px 24px 60px; }
           .home-hero-text h1 { font-size: 30px; }
           .home-hero-stats { gap: 28px; flex-wrap: wrap; }
