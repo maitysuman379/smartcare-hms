@@ -1,4 +1,4 @@
-const API_BASE_URL = "http://localhost:5000/api";
+const API_BASE_URL = "https://smartcare-hms-backend.vercel.app/api";
 
 // Generic request helper — handles JSON, errors, and auth headers
 async function request(endpoint, { method = "GET", body, token } = {}) {
