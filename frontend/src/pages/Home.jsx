@@ -1781,7 +1781,7 @@ export default function Home() {
 
           border-bottom: 1px solid var(--color-line);
 
-          margin-bottom: 6px;
+          margin-bottom: 6px; 
         }
 
         .profile-info strong {

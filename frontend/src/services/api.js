@@ -151,6 +151,33 @@ export function getPatientAppointments(patientId) {
   });
 }
 
+export function getMyProfile() {
+  const token = getToken();
+
+  if (!token) {
+    throw new Error("Authentication token not found");
+  }
+
+  return request("/users/profile", {
+    method: "GET",
+    token,
+  });
+}
+
+export function updateMyProfile(profileData) {
+  const token = getToken();
+
+  if (!token) {
+    throw new Error("Authentication token not found");
+  }
+
+  return request("/users/profile", {
+    method: "PUT",
+    token,
+    body: profileData,
+  });
+}
+
 export function logout() {
   localStorage.removeItem(TOKEN_KEY);
   localStorage.removeItem(USER_KEY);

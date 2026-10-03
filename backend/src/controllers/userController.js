@@ -43,6 +43,7 @@ const updateMyProfile = async (req, res) => {
 
     const {
       username,
+      profile_image,
       phone,
       date_of_birth,
       gender,
@@ -64,6 +65,7 @@ const updateMyProfile = async (req, res) => {
 
     await updateUserProfile(userId, {
       username: username.trim(),
+      profile_image: profile_image || null,
       phone: phone || null,
       date_of_birth: date_of_birth || null,
       gender: gender || null,

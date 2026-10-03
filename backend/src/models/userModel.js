@@ -72,6 +72,7 @@ const getUserProfileById = async (userId) => {
 const updateUserProfile = async (userId, profileData) => {
   const {
     username,
+    profile_image,
     phone,
     date_of_birth,
     gender,
@@ -89,6 +90,7 @@ const updateUserProfile = async (userId, profileData) => {
     UPDATE users
     SET
       username = ?,
+      profile_image = ?,
       phone = ?,
       date_of_birth = ?,
       gender = ?,
@@ -103,6 +105,7 @@ const updateUserProfile = async (userId, profileData) => {
     `,
     [
       username,
+      profile_image,
       phone,
       date_of_birth,
       gender,

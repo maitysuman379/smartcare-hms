@@ -1,4 +1,5 @@
 import { Routes, Route, Navigate } from "react-router-dom";
+import MyProfile from "./pages/MyProfile";
 import Layout from "./components/Layout.jsx";
 import Home from "./pages/Home.jsx";
 import Login from "./pages/Login.jsx";
@@ -22,6 +23,7 @@ export default function App() {
         <Route path="/patient/dashboard" element={<PatientDashboard />} />
         <Route path="/doctor/dashboard" element={<DoctorDashboard />} />
         <Route path="/admin/dashboard" element={<AdminDashboard />} />
+        <Route path="/profile" element={<MyProfile />} />
       </Route>
 
       {/* Default: unmatched URLs go to Home instead of Login */}
