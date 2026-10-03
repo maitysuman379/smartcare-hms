@@ -3,18 +3,26 @@ const express = require("express");
 const authMiddleware = require("../middleware/authMiddleware");
 const authorizeRoles = require("../middleware/roleMiddleware");
 
+const {
+  getMyProfile,
+  updateMyProfile,
+} = require("../controllers/userController");
+
 const router = express.Router();
 
-// Protected profile route
-router.get("/profile", authMiddleware, (req, res) => {
-  res.json({
-    success: true,
-    message: "You are authenticated",
-    user: req.user,
-  });
-});
+/*
+ * Get logged-in user's profile
+ */
+router.get("/profile", authMiddleware, getMyProfile);
 
-// ADMIN only test route
+/*
+ * Update logged-in user's profile
+ */
+router.put("/profile", authMiddleware, updateMyProfile);
+
+/*
+ * ADMIN only test route
+ */
 router.get(
   "/admin-test",
   authMiddleware,
