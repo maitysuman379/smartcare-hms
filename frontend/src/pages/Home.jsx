@@ -1,9 +1,10 @@
 import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 
+import ProfileMenu from "../components/ProfileMenu.jsx";
+
 import {
   getCurrentUser,
-  logout,
   getMyPatient,
   getAllDoctors,
   createAppointment,
@@ -56,7 +57,6 @@ export default function Home() {
      NAVBAR STATE
   -------------------------------- */
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const [profileOpen, setProfileOpen] = useState(false);
 
   /* --------------------------------
      DOCTORS
@@ -147,22 +147,9 @@ export default function Home() {
   };
 
   /* --------------------------------
-     LOGOUT
-  -------------------------------- */
-  const handleLogout = () => {
-    logout();
-
-    setProfileOpen(false);
-    setMobileMenuOpen(false);
-
-    navigate("/");
-  };
-
-  /* --------------------------------
      DASHBOARD
   -------------------------------- */
   const handleDashboard = () => {
-    setProfileOpen(false);
     setMobileMenuOpen(false);
 
     if (userRole === "ADMIN") {
@@ -362,55 +349,7 @@ export default function Home() {
               </Link>
             </>
           ) : (
-            /* --------------------------------
-               PROFILE
-            -------------------------------- */
-            <div className="profile-menu">
-              <button
-                type="button"
-                className="profile-button"
-                onClick={() => {
-                  setProfileOpen((prev) => !prev);
-                  setMobileMenuOpen(false);
-                }}
-                aria-label="Open profile menu"
-                aria-expanded={profileOpen}
-              >
-                <span className="profile-icon">
-                  {user.username?.charAt(0).toUpperCase() || "U"}
-                </span>
-              </button>
-
-              {profileOpen && (
-                <div className="profile-dropdown">
-                  <div className="profile-info">
-                    <strong>{user.username}</strong>
-                    <span>{user.role}</span>
-                  </div>
-
-                  <button type="button" onClick={handleDashboard}>
-                    Dashboard
-                  </button>
-
-                  {user.role === "PATIENT" && (
-                    <Link
-                      to="/patient/health-profile"
-                      onClick={() => setProfileOpen(false)}
-                    >
-                      Health Profile
-                    </Link>
-                  )}
-
-                  <Link to="/profile" onClick={() => setProfileOpen(false)}>
-                    My Profile
-                  </Link>
-
-                  <button type="button" onClick={handleLogout}>
-                    Log out
-                  </button>
-                </div>
-              )}
-            </div>
+            <ProfileMenu />
           )}
 
           {/* --------------------------------
@@ -421,7 +360,6 @@ export default function Home() {
             className="hamburger-button"
             onClick={() => {
               setMobileMenuOpen((prev) => !prev);
-              setProfileOpen(false);
             }}
             aria-label="Toggle navigation menu"
             aria-expanded={mobileMenuOpen}
@@ -1700,143 +1638,6 @@ export default function Home() {
         }
 
         /* =====================================================
-           PROFILE
-        ===================================================== */
-
-        .profile-menu {
-          position: relative;
-        }
-
-        .profile-button {
-          width: 40px;
-          height: 40px;
-
-          border: 1px solid var(--color-line);
-
-          border-radius: 50%;
-
-          background: white;
-
-          cursor: pointer;
-
-          display: flex;
-
-          align-items: center;
-          justify-content: center;
-
-          padding: 0;
-        }
-
-        .profile-icon {
-          width: 32px;
-          height: 32px;
-
-          border-radius: 50%;
-
-          background: var(--color-primary);
-
-          color: white;
-
-          display: flex;
-
-          align-items: center;
-          justify-content: center;
-
-          font-weight: 800;
-
-          font-size: 14px;
-        }
-
-        .profile-dropdown {
-          position: absolute;
-
-          top: calc(100% + 10px);
-
-          right: 0;
-
-          width: 190px;
-
-          background: white;
-
-          border: 1px solid var(--color-line);
-
-          border-radius: 12px;
-
-          box-shadow:
-            0 10px 30px rgba(0, 0, 0, 0.12);
-
-          padding: 10px;
-
-          z-index: 2000;
-        }
-
-        .profile-info {
-          display: flex;
-
-          flex-direction: column;
-
-          gap: 3px;
-
-          padding: 10px;
-
-          border-bottom: 1px solid var(--color-line);
-
-          margin-bottom: 6px; 
-        }
-
-        .profile-info strong {
-          font-size: 14px;
-
-          color: var(--color-ink);
-        }
-
-        .profile-info span {
-          font-size: 11px;
-
-          color: var(--color-ink-soft);
-        }
-
-        .profile-dropdown button,
-.profile-dropdown a {
-  display: block;
-
-  width: 100%;
-
-  border: 0;
-
-  background: transparent;
-
-  padding: 10px;
-
-  margin: 0;
-
-  box-sizing: border-box;
-
-  text-align: left;
-
-  text-decoration: none;
-
-  border-radius: 8px;
-
-  cursor: pointer;
-
-  font-size: 13px;
-
-  font-family: inherit;
-
-  color: var(--color-ink);
-}
-
-.profile-dropdown button:hover,
-.profile-dropdown a:hover {
-  background: var(--color-primary-soft);
-
-  color: var(--color-primary);
-
-  text-decoration: none;
-}
-
-        /* =====================================================
            HAMBURGER
         ===================================================== */
 
@@ -1965,11 +1766,6 @@ export default function Home() {
             cursor: pointer;
           }
 
-          /* Profile stays visible */
-          .profile-menu {
-            display: block;
-          }
-
           /* Hero */
           .home-hero {
             padding: 80px 24px 60px;
@@ -2041,16 +1837,6 @@ export default function Home() {
           .auth-mark {
             width: 24px;
             height: 24px;
-          }
-
-          .profile-button {
-            width: 38px;
-            height: 38px;
-          }
-
-          .profile-icon {
-            width: 30px;
-            height: 30px;
           }
 
           .hamburger-button {
