@@ -178,6 +178,78 @@ export function updateMyProfile(profileData) {
   });
 }
 
+// ---- Reviews ----
+
+// Get publicly approved reviews
+export function getPublicReviews() {
+  return request("/reviews", {
+    method: "GET",
+  });
+}
+
+// Submit a review - PATIENT / DOCTOR
+export function submitReview({ rating, review }) {
+  const token = getToken();
+
+  if (!token) {
+    throw new Error("Authentication token not found");
+  }
+
+  return request("/reviews", {
+    method: "POST",
+    token,
+    body: {
+      rating,
+      review,
+    },
+  });
+}
+
+// Get all reviews - ADMIN
+export function getAdminReviews() {
+  const token = getToken();
+
+  if (!token) {
+    throw new Error("Authentication token not found");
+  }
+
+  return request("/reviews/admin", {
+    method: "GET",
+    token,
+  });
+}
+
+// Approve / reject review - ADMIN
+export function updateReviewStatus(reviewId, status) {
+  const token = getToken();
+
+  if (!token) {
+    throw new Error("Authentication token not found");
+  }
+
+  return request(`/reviews/admin/${reviewId}/status`, {
+    method: "PATCH",
+    token,
+    body: {
+      status,
+    },
+  });
+}
+
+// Delete review - ADMIN
+export function deleteReview(reviewId) {
+  const token = getToken();
+
+  if (!token) {
+    throw new Error("Authentication token not found");
+  }
+
+  return request(`/reviews/admin/${reviewId}`, {
+    method: "DELETE",
+    token,
+  });
+}
+
 export function logout() {
   localStorage.removeItem(TOKEN_KEY);
   localStorage.removeItem(USER_KEY);

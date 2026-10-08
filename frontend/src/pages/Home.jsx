@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 
 import ProfileMenu from "../components/ProfileMenu.jsx";
+import ReviewSection from "../components/ReviewSection.jsx";
 
 import {
   getCurrentUser,
@@ -303,6 +304,10 @@ export default function Home() {
 
           <a href="#appointment" onClick={() => setMobileMenuOpen(false)}>
             Appointment
+          </a>
+
+          <a href="#reviews" onClick={() => setMobileMenuOpen(false)}>
+            Reviews
           </a>
 
           <a href="#contact" onClick={() => setMobileMenuOpen(false)}>
@@ -715,6 +720,16 @@ export default function Home() {
           </div>
         </div>
       </section>
+
+      {/* =========================================================
+          REVIEWS
+      ========================================================= */}
+      <ReviewSection />
+
+      {/* =========================================================
+          CONTACT
+      ========================================================= */}
+      <section id="contact" className="home-section home-section-alt"></section>
 
       {/* =========================================================
           CONTACT
