@@ -5,6 +5,7 @@ function ReviewSection() {
   const [reviews, setReviews] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [showAll, setShowAll] = useState(false);
 
   useEffect(() => {
     const loadReviews = async () => {
@@ -32,13 +33,13 @@ function ReviewSection() {
     );
   }
 
-  if (error) {
+  if (error || reviews.length === 0) {
     return null;
   }
 
-  if (reviews.length === 0) {
-    return null;
-  }
+  // Show only the first 6 reviews initially.
+  // On mobile, CSS will handle the single-column layout.
+  const visibleReviews = showAll ? reviews : reviews.slice(0, 6);
 
   return (
     <section id="reviews" className="reviews-section">
@@ -52,7 +53,7 @@ function ReviewSection() {
         </div>
 
         <div className="reviews-grid">
-          {reviews.map((item) => (
+          {visibleReviews.map((item) => (
             <article className="review-card" key={item.id}>
               <div
                 className="review-stars"
@@ -85,6 +86,18 @@ function ReviewSection() {
             </article>
           ))}
         </div>
+
+        {reviews.length > 6 && (
+          <div className="reviews-more-wrapper">
+            <button
+              type="button"
+              className="reviews-more-btn"
+              onClick={() => setShowAll((prev) => !prev)}
+            >
+              {showAll ? "Show Less Reviews" : "Show More Reviews"}
+            </button>
+          </div>
+        )}
       </div>
     </section>
   );
