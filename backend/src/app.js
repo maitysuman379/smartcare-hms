@@ -22,6 +22,7 @@ const billRoutes = require("./routes/billRoutes");
 const notificationRoutes = require("./routes/notificationRoutes");
 const aiRoutes = require("./routes/aiRoutes");
 const aiPatientVitalsRoutes = require("./routes/aiPatientVitalsRoutes");
+const reviewRoutes = require("./routes/reviewRoutes");
 
 const app = express();
 
@@ -77,6 +78,7 @@ app.use("/api/bills", billRoutes);
 app.use("/api/notifications", notificationRoutes);
 app.use("/api/ai", aiRoutes);
 app.use("/api/ai/vitals", aiPatientVitalsRoutes);
+app.use("/api/reviews", reviewRoutes);
 
 // 404
 app.use((req, res) => {
