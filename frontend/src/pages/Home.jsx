@@ -729,11 +729,6 @@ export default function Home() {
       {/* =========================================================
           CONTACT
       ========================================================= */}
-      <section id="contact" className="home-section home-section-alt"></section>
-
-      {/* =========================================================
-          CONTACT
-      ========================================================= */}
       <section id="contact" className="home-section home-section-alt">
         <div className="home-section-head">
           <div className="page-eyebrow">Get in touch</div>
