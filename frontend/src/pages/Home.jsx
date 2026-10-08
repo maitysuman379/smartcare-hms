@@ -1021,7 +1021,7 @@ export default function Home() {
         ===================================================== */
 
         .home-section {
-          padding: 76px 40px;
+          padding: 20px 40px;
 
           max-width: 1100px;
 
