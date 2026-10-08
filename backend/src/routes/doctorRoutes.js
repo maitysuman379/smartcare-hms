@@ -12,11 +12,11 @@ const {
 
 const router = express.Router();
 
-// Get all doctors
-router.get("/", authMiddleware, getDoctors);
+// Get all doctors - PUBLIC
+router.get("/", getDoctors);
 
-// Get doctor by ID
-router.get("/:id", authMiddleware, getDoctor);
+// Get doctor by ID - PUBLIC
+router.get("/:id", getDoctor);
 
 // Create doctor - ADMIN only
 router.post("/", authMiddleware, authorizeRoles("ADMIN"), addDoctor);
