@@ -48,6 +48,44 @@ const steps = [
   },
 ];
 
+const faqs = [
+  {
+    question: "How does the AI health assessment work?",
+    answer:
+      "You submit your vitals and symptoms through your health profile. A trained machine-learning model estimates a risk percentage for the conditions SmartCare screens — Heart Disease, Diabetes and Kidney Disease — and shows the result on your dashboard.",
+  },
+  {
+    question: "Is the AI result a medical diagnosis?",
+    answer:
+      "No. The result is a screening estimate that helps point you to the right specialist. It cannot replace an examination, tests or advice from a qualified doctor, so please consult one before making any health decision.",
+  },
+  {
+    question: "How is my doctor chosen?",
+    answer:
+      "Your predicted condition is mapped to a specialization — for example, a heart-related result points to Cardiology. If no specialist in that field is available, you are matched with a General Medicine doctor instead.",
+  },
+  {
+    question: "How do I book an appointment?",
+    answer:
+      "Log in with a patient account, open the Book an appointment section on this page, choose an available doctor, a date and a time, and submit. Your booking is saved and you can see it from your dashboard.",
+  },
+  {
+    question: "Why do I need to verify my email?",
+    answer:
+      "When you register, we send a 6-digit code to your email address. Entering it confirms the address belongs to you and keeps accounts secure. The code expires after 10 minutes, and you can request a new one.",
+  },
+  {
+    question: "Can doctors register on SmartCare?",
+    answer:
+      "Yes. Choose Doctor when registering and verify your email. The hospital admin then sets up your doctor profile — specialization, fee and availability — before you appear in the doctor list.",
+  },
+  {
+    question: "Is my information safe?",
+    answer:
+      "Passwords are stored in hashed form, access uses secure login tokens, and role-based permissions control what patients, doctors and admins can see. SmartCare HMS is an academic project, so please avoid entering real sensitive medical details while testing.",
+  },
+];
+
 export default function Home() {
   const navigate = useNavigate();
 
@@ -58,6 +96,11 @@ export default function Home() {
      NAVBAR STATE
   -------------------------------- */
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+
+  /* --------------------------------
+     FAQ
+  -------------------------------- */
+  const [openFaq, setOpenFaq] = useState(null);
 
   /* --------------------------------
      DOCTORS
@@ -725,6 +768,61 @@ export default function Home() {
           REVIEWS
       ========================================================= */}
       <ReviewSection />
+
+      {/* =========================================================
+          FAQ
+      ========================================================= */}
+      <section id="faq" className="home-section">
+        <div className="home-section-head">
+          <div className="page-eyebrow">Questions</div>
+
+          <h2 className="home-section-title">Frequently asked questions</h2>
+
+          <p className="home-section-sub">
+            Quick answers about how SmartCare works.
+          </p>
+        </div>
+
+        <div className="faq-list">
+          {faqs.map((faq, index) => {
+            const isOpen = openFaq === index;
+
+            return (
+              <div
+                key={faq.question}
+                className={`faq-item ${isOpen ? "faq-item-open" : ""}`}
+              >
+                <h3 className="faq-heading">
+                  <button
+                    type="button"
+                    id={`faq-question-${index}`}
+                    className="faq-question"
+                    aria-expanded={isOpen}
+                    aria-controls={`faq-answer-${index}`}
+                    onClick={() => setOpenFaq(isOpen ? null : index)}
+                  >
+                    <span>{faq.question}</span>
+
+                    <span className="faq-icon" aria-hidden="true">
+                      +
+                    </span>
+                  </button>
+                </h3>
+
+                <div
+                  id={`faq-answer-${index}`}
+                  role="region"
+                  aria-labelledby={`faq-question-${index}`}
+                  className="faq-answer"
+                  hidden={!isOpen}
+                >
+                  <p>{faq.answer}</p>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </section>
 
       {/* =========================================================
           CONTACT
@@ -1558,6 +1656,123 @@ export default function Home() {
         }
 
         /* =====================================================
+           FAQ
+        ===================================================== */
+
+        .faq-list {
+          max-width: 760px;
+
+          margin: 0 auto 40px;
+
+          display: flex;
+
+          flex-direction: column;
+
+          gap: 12px;
+        }
+
+        .faq-item {
+          background: var(--color-surface);
+
+          border: 1px solid var(--color-line);
+
+          border-radius: var(--radius-md);
+
+          box-shadow: var(--shadow-card);
+
+          overflow: hidden;
+
+          transition: border-color 0.2s ease;
+        }
+
+        .faq-item-open {
+          border-color: var(--color-primary);
+        }
+
+        .faq-heading {
+          margin: 0;
+
+          font-size: 15px;
+        }
+
+        .faq-question {
+          width: 100%;
+
+          display: flex;
+
+          align-items: center;
+          justify-content: space-between;
+
+          gap: 16px;
+
+          padding: 18px 20px;
+
+          background: none;
+
+          border: 0;
+
+          text-align: left;
+
+          font-family: var(--font-display);
+
+          font-size: 15px;
+
+          font-weight: 700;
+
+          color: var(--color-ink);
+
+          cursor: pointer;
+        }
+
+        .faq-question:hover {
+          color: var(--color-primary);
+        }
+
+        .faq-icon {
+          flex-shrink: 0;
+
+          width: 26px;
+          height: 26px;
+
+          border-radius: 50%;
+
+          background: var(--color-primary-soft);
+
+          color: var(--color-primary);
+
+          display: flex;
+
+          align-items: center;
+          justify-content: center;
+
+          font-size: 18px;
+
+          font-weight: 700;
+
+          line-height: 1;
+
+          transition: transform 0.2s ease;
+        }
+
+        .faq-item-open .faq-icon {
+          transform: rotate(45deg);
+        }
+
+        .faq-answer {
+          padding: 0 20px 18px;
+        }
+
+        .faq-answer p {
+          margin: 0;
+
+          font-size: 14px;
+
+          line-height: 1.65;
+
+          color: var(--color-ink-soft);
+        }
+
+        /* =====================================================
            CONTACT
         ===================================================== */
 
@@ -1885,6 +2100,16 @@ export default function Home() {
           .appointment-form-card,
           .appointment-info-card {
             padding: 20px;
+          }
+
+          .faq-question {
+            padding: 16px;
+
+            font-size: 14px;
+          }
+
+          .faq-answer {
+            padding: 0 16px 16px;
           }
 
           .home-footer {
