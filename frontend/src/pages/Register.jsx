@@ -1,9 +1,13 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { registerUser } from "../services/api.js";
+import { registerUser, sendOtp } from "../services/api.js";
+
+const RESEND_COOLDOWN_SECONDS = 60;
 
 export default function Register() {
   const navigate = useNavigate();
+
+  const [step, setStep] = useState("form"); // "form" | "verify"
   const [form, setForm] = useState({
     name: "",
     email: "",
@@ -11,18 +15,70 @@ export default function Register() {
     confirmPassword: "",
     role: "patient",
   });
+  const [otp, setOtp] = useState("");
   const [error, setError] = useState("");
+  const [info, setInfo] = useState("");
   const [loading, setLoading] = useState(false);
+  const [resendSeconds, setResendSeconds] = useState(0);
+
+  // Same normalization the backend uses, so the code lookup always matches
+  const normalizedEmail = form.email.trim().toLowerCase();
+
+  // Resend countdown
+  useEffect(() => {
+    if (resendSeconds <= 0) return;
+
+    const timer = setTimeout(() => setResendSeconds((s) => s - 1), 1000);
+    return () => clearTimeout(timer);
+  }, [resendSeconds]);
 
   const handleChange = (e) => {
     setForm({ ...form, [e.target.name]: e.target.value });
   };
 
-  const handleSubmit = async (e) => {
+  const handleOtpChange = (e) => {
+    // digits only, max 6
+    setOtp(e.target.value.replace(/\D/g, "").slice(0, 6));
+  };
+
+  // Ask the backend to email a code. Returns true if a valid code is on its way.
+  const requestCode = async () => {
+    setLoading(true);
+    try {
+      await sendOtp({ email: normalizedEmail });
+      setResendSeconds(RESEND_COOLDOWN_SECONDS);
+      return true;
+    } catch (err) {
+      const message = err.message || "Could not send the code.";
+
+      // The backend refuses a second code within 60 seconds, but the earlier
+      // code is still valid, so just continue to the verify screen.
+      if (/^please wait/i.test(message)) {
+        const match = message.match(/(\d+)/);
+        setResendSeconds(match ? Number(match[1]) : RESEND_COOLDOWN_SECONDS);
+        setInfo("A code was already sent a moment ago. Check your inbox.");
+        return true;
+      }
+
+      setError(message);
+      return false;
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // ---- Step 1: validate the form, then send the code ----
+  const handleFormSubmit = async (e) => {
     e.preventDefault();
     setError("");
+    setInfo("");
 
-    if (!form.name || !form.email || !form.password || !form.confirmPassword) {
+    if (
+      !form.name.trim() ||
+      !form.email.trim() ||
+      !form.password ||
+      !form.confirmPassword
+    ) {
       setError("Please fill in all fields.");
       return;
     }
@@ -32,13 +88,32 @@ export default function Register() {
       return;
     }
 
+    const sent = await requestCode();
+
+    if (sent) {
+      setOtp("");
+      setStep("verify");
+    }
+  };
+
+  // ---- Step 2: verify the code and create the account ----
+  const handleVerifySubmit = async (e) => {
+    e.preventDefault();
+    setError("");
+
+    if (otp.length !== 6) {
+      setError("Enter the 6-digit code from your email.");
+      return;
+    }
+
     setLoading(true);
     try {
       await registerUser({
-        username: form.name,
-        email: form.email,
+        username: form.name.trim(),
+        email: normalizedEmail,
         password: form.password,
-        role: form.role.toUpperCase(), // backend expects "PATIENT" / "DOCTOR" / "ADMIN"
+        role: form.role.toUpperCase(), // backend expects "PATIENT" / "DOCTOR"
+        otp,
       });
       navigate("/login");
     } catch (err) {
@@ -46,6 +121,27 @@ export default function Register() {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleResend = async () => {
+    if (resendSeconds > 0) return;
+
+    setError("");
+    setInfo("");
+
+    const sent = await requestCode();
+
+    if (sent) {
+      setOtp("");
+      setInfo("A new code has been sent to your email.");
+    }
+  };
+
+  const handleBack = () => {
+    setStep("form");
+    setOtp("");
+    setError("");
+    setInfo("");
   };
 
   return (
@@ -85,87 +181,150 @@ export default function Register() {
             <span>SmartCare HMS</span>
           </div>
 
-          <h1 className="page-title">Create your account</h1>
-          <p className="page-subtitle">
-            Register to get started with SmartCare.
-          </p>
+          {step === "form" ? (
+            <>
+              <h1 className="page-title">Create your account</h1>
+              <p className="page-subtitle">
+                Register to get started with SmartCare.
+              </p>
 
-          <form onSubmit={handleSubmit}>
-            <div className="form-row">
-              <label htmlFor="name">Full name</label>
-              <input
-                id="name"
-                name="name"
-                type="text"
-                placeholder="Your full name"
-                value={form.name}
-                onChange={handleChange}
-              />
-            </div>
+              <form onSubmit={handleFormSubmit}>
+                <div className="form-row">
+                  <label htmlFor="name">Full name</label>
+                  <input
+                    id="name"
+                    name="name"
+                    type="text"
+                    placeholder="Your full name"
+                    value={form.name}
+                    onChange={handleChange}
+                  />
+                </div>
 
-            <div className="form-row">
-              <label htmlFor="email">Email</label>
-              <input
-                id="email"
-                name="email"
-                type="email"
-                placeholder="you@example.com"
-                value={form.email}
-                onChange={handleChange}
-              />
-            </div>
+                <div className="form-row">
+                  <label htmlFor="email">Email</label>
+                  <input
+                    id="email"
+                    name="email"
+                    type="email"
+                    placeholder="you@example.com"
+                    value={form.email}
+                    onChange={handleChange}
+                  />
+                </div>
 
-            <div className="form-row">
-              <label htmlFor="role">Register as</label>
-              <select
-                id="role"
-                name="role"
-                value={form.role}
-                onChange={handleChange}
-              >
-                <option value="patient">Patient</option>
-                <option value="doctor">Doctor</option>
-              </select>
-            </div>
+                <div className="form-row">
+                  <label htmlFor="role">Register as</label>
+                  <select
+                    id="role"
+                    name="role"
+                    value={form.role}
+                    onChange={handleChange}
+                  >
+                    <option value="patient">Patient</option>
+                    <option value="doctor">Doctor</option>
+                  </select>
+                </div>
 
-            <div className="form-row">
-              <label htmlFor="password">Password</label>
-              <input
-                id="password"
-                name="password"
-                type="password"
-                placeholder="••••••••"
-                value={form.password}
-                onChange={handleChange}
-              />
-            </div>
+                <div className="form-row">
+                  <label htmlFor="password">Password</label>
+                  <input
+                    id="password"
+                    name="password"
+                    type="password"
+                    placeholder="••••••••"
+                    value={form.password}
+                    onChange={handleChange}
+                  />
+                </div>
 
-            <div className="form-row">
-              <label htmlFor="confirmPassword">Confirm password</label>
-              <input
-                id="confirmPassword"
-                name="confirmPassword"
-                type="password"
-                placeholder="••••••••"
-                value={form.confirmPassword}
-                onChange={handleChange}
-              />
-            </div>
+                <div className="form-row">
+                  <label htmlFor="confirmPassword">Confirm password</label>
+                  <input
+                    id="confirmPassword"
+                    name="confirmPassword"
+                    type="password"
+                    placeholder="••••••••"
+                    value={form.confirmPassword}
+                    onChange={handleChange}
+                  />
+                </div>
 
-            {error && <p className="auth-error">{error}</p>}
+                {error && <p className="auth-error">{error}</p>}
 
-            <button
-              type="submit"
-              className="btn btn-primary auth-submit"
-              disabled={loading}
-            >
-              {loading ? "Creating account..." : "Create account"}
-            </button>
-          </form>
+                <button
+                  type="submit"
+                  className="btn btn-primary auth-submit"
+                  disabled={loading}
+                >
+                  {loading ? "Sending code..." : "Send verification code"}
+                </button>
+              </form>
 
-          <p className="auth-footer-text">
-            Already have an account? <Link to="/login">Log in here</Link>
-          </p>
+              <p className="auth-footer-text">
+                Already have an account? <Link to="/login">Log in here</Link>
+              </p>
+            </>
+          ) : (
+            <>
+              <h1 className="page-title">Verify your email</h1>
+              <p className="page-subtitle">
+                We sent a 6-digit code to <strong>{normalizedEmail}</strong>. It
+                expires in 10 minutes.
+              </p>
+
+              <form onSubmit={handleVerifySubmit}>
+                <div className="form-row">
+                  <label htmlFor="otp">Verification code</label>
+                  <input
+                    id="otp"
+                    name="otp"
+                    type="text"
+                    inputMode="numeric"
+                    autoComplete="one-time-code"
+                    maxLength={6}
+                    placeholder="123456"
+                    className="otp-input"
+                    value={otp}
+                    onChange={handleOtpChange}
+                  />
+                </div>
+
+                {info && <p className="auth-info">{info}</p>}
+                {error && <p className="auth-error">{error}</p>}
+
+                <button
+                  type="submit"
+                  className="btn btn-primary auth-submit"
+                  disabled={loading}
+                >
+                  {loading ? "Verifying..." : "Verify & create account"}
+                </button>
+
+                <div className="otp-actions">
+                  <button
+                    type="button"
+                    className="auth-link-btn"
+                    onClick={handleResend}
+                    disabled={loading || resendSeconds > 0}
+                  >
+                    {resendSeconds > 0
+                      ? `Resend code in ${resendSeconds}s`
+                      : "Resend code"}
+                  </button>
+
+                  <button
+                    type="button"
+                    className="auth-link-btn"
+                    onClick={handleBack}
+                    disabled={loading}
+                  >
+                    Edit details
+                  </button>
+                </div>
+              </form>
+            </>
+          )}
         </div>
       </div>
 
@@ -249,6 +408,7 @@ export default function Register() {
           color: rgba(255,255,255,0.7);
         }
 
+        /* ---- Right form side ---- */
         .auth-form-side {
           flex: 1;
           display: flex;
@@ -290,6 +450,38 @@ export default function Register() {
           color: var(--color-danger);
           font-size: 13px;
           margin: -8px 0 12px;
+        }
+        .auth-info {
+          color: var(--color-primary);
+          font-size: 13px;
+          margin: -8px 0 12px;
+        }
+
+        .otp-input {
+          text-align: center;
+          font-size: 24px;
+          font-weight: 700;
+          letter-spacing: 8px;
+          padding: 12px;
+        }
+        .otp-actions {
+          display: flex;
+          justify-content: space-between;
+          margin-top: 18px;
+        }
+        .auth-link-btn {
+          background: none;
+          border: none;
+          padding: 0;
+          font-size: 13px;
+          font-weight: 600;
+          color: var(--color-primary);
+          cursor: pointer;
+        }
+        .auth-link-btn:hover:not(:disabled) { text-decoration: underline; }
+        .auth-link-btn:disabled {
+          color: var(--color-ink-soft);
+          cursor: not-allowed;
         }
 
         .auth-footer-text {
