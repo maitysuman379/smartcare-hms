@@ -8,6 +8,8 @@ const {
 } = require("../models/userModel");
 
 const { createPatient } = require("../models/patientModel");
+const { checkOtp } = require("./otpController");
+const { deleteOtps } = require("../models/otpModel");
 
 // ================================
 // REGISTER
@@ -15,13 +17,36 @@ const { createPatient } = require("../models/patientModel");
 
 const register = async (req, res) => {
   try {
-    const { username, email, password, role } = req.body;
+    const { username, password, role, otp } = req.body;
+
+    // Normalize email the same way send-otp does, so the code lookup matches
+    const email = String(req.body.email || "")
+      .trim()
+      .toLowerCase();
 
     // Validate required fields
     if (!username || !email || !password) {
       return res.status(400).json({
         success: false,
         message: "Username, email and password are required",
+      });
+    }
+
+    // Only allow valid roles
+    const allowedRoles = [
+      "ADMIN",
+      "DOCTOR",
+      "PATIENT",
+      "RECEPTIONIST",
+      "LAB_STAFF",
+    ];
+
+    const userRole = role || "PATIENT";
+
+    if (!allowedRoles.includes(userRole)) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid role",
       });
     }
 
@@ -45,26 +70,28 @@ const register = async (req, res) => {
       });
     }
 
-    // Hash password
-    const passwordHash = await bcrypt.hash(password, 10);
+    // ================================
+    // VERIFY EMAIL OTP (patients only)
+    // ================================
 
-    // Only allow valid roles
-    const allowedRoles = [
-      "ADMIN",
-      "DOCTOR",
-      "PATIENT",
-      "RECEPTIONIST",
-      "LAB_STAFF",
-    ];
-
-    const userRole = role || "PATIENT";
-
-    if (!allowedRoles.includes(userRole)) {
+    if (!otp) {
       return res.status(400).json({
         success: false,
-        message: "Invalid role",
+        message: "Verification code is required",
       });
     }
+
+    const otpResult = await checkOtp(email, otp);
+
+    if (!otpResult.ok) {
+      return res.status(400).json({
+        success: false,
+        message: otpResult.message,
+      });
+    }
+
+    // Hash password
+    const passwordHash = await bcrypt.hash(password, 10);
 
     // ================================
     // CREATE USER
@@ -89,6 +116,14 @@ const register = async (req, res) => {
         name: username,
         email,
       });
+    }
+
+    // The code is single-use: remove it now that the account exists.
+    // A failure here must not turn a successful registration into an error.
+    try {
+      await deleteOtps(email);
+    } catch (cleanupError) {
+      console.error("OTP cleanup error:", cleanupError);
     }
 
     // ================================

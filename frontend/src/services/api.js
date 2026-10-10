@@ -26,10 +26,17 @@ async function request(endpoint, { method = "GET", body, token } = {}) {
 }
 
 // ---- Auth ----
-export function registerUser({ username, email, password, role }) {
+export function sendOtp({ email }) {
+  return request("/auth/send-otp", {
+    method: "POST",
+    body: { email },
+  });
+}
+
+export function registerUser({ username, email, password, role, otp }) {
   return request("/auth/register", {
     method: "POST",
-    body: { username, email, password, role },
+    body: { username, email, password, role, otp },
   });
 }
 
