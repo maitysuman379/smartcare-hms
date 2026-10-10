@@ -18,14 +18,32 @@ const findUserByUsername = async (username) => {
   return rows[0];
 };
 
+const findUserByIdForAuth = async (userId) => {
+  const [rows] = await pool.query(
+    `SELECT id, username, email, role, status
+     FROM users
+     WHERE id = ?
+     LIMIT 1`,
+    [userId],
+  );
+
+  return rows[0] || null;
+};
+
 const createUser = async (userData) => {
-  const { username, email, passwordHash, role = "PATIENT" } = userData;
+  const {
+    username,
+    email,
+    passwordHash,
+    role = "PATIENT",
+    status = "ACTIVE",
+  } = userData;
 
   const [result] = await pool.query(
     `INSERT INTO users
-      (username, email, password_hash, role)
-     VALUES (?, ?, ?, ?)`,
-    [username, email, passwordHash, role],
+      (username, email, password_hash, role, status)
+     VALUES (?, ?, ?, ?, ?)`,
+    [username, email, passwordHash, role, status],
   );
 
   return result.insertId;
@@ -126,6 +144,7 @@ const updateUserProfile = async (userId, profileData) => {
 module.exports = {
   findUserByEmail,
   findUserByUsername,
+  findUserByIdForAuth,
   createUser,
   getUserProfileById,
   updateUserProfile,
