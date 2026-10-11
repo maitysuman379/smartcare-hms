@@ -1,8 +1,14 @@
 import { useEffect, useRef, useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
-import { getCurrentUser, logout } from "../services/api.js";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 
-/* ---------- Styles (kept inside this file) ---------- */
+import {
+  getCurrentUser,
+  logout,
+  getCurrentAdmin,
+  logoutAdmin,
+} from "../services/api.js";
+
+/* ---------- Styles ---------- */
 const styles = `
 .pm-root {
   --pm-card: #ffffff;
@@ -17,10 +23,10 @@ const styles = `
 
   position: relative;
   display: inline-block;
+  flex-shrink: 0;
   font-family: "Inter", system-ui, -apple-system, "Segoe UI", sans-serif;
 }
 
-/* Avatar button */
 .pm-root .pm-trigger {
   display: flex;
   align-items: center;
@@ -37,7 +43,8 @@ const styles = `
 .pm-root .pm-trigger:hover,
 .pm-root .pm-trigger[aria-expanded="true"] {
   border-color: var(--pm-brand);
-  box-shadow: 0 0 0 4px color-mix(in srgb, var(--pm-brand) 15%, transparent);
+  box-shadow: 0 0 0 4px
+    color-mix(in srgb, var(--pm-brand) 15%, transparent);
 }
 
 .pm-root .pm-trigger:focus-visible {
@@ -51,7 +58,11 @@ const styles = `
   border-radius: 50%;
   display: grid;
   place-items: center;
-  background: linear-gradient(135deg, var(--pm-brand), var(--pm-brand-2));
+  background: linear-gradient(
+    135deg,
+    var(--pm-brand),
+    var(--pm-brand-2)
+  );
   color: #fff;
   font-size: 15px;
   font-weight: 700;
@@ -80,24 +91,33 @@ const styles = `
   position: absolute;
   right: 0;
   top: calc(100% + 10px);
-  z-index: 1000;
+  z-index: 10000;
   width: 260px;
+  max-width: calc(100vw - 24px);
   padding: 8px;
+  box-sizing: border-box;
   background: var(--pm-card);
   border: 1px solid var(--pm-border);
   border-radius: 16px;
-  box-shadow: 0 4px 6px rgba(15, 23, 42, 0.05),
+  box-shadow:
+    0 4px 6px rgba(15, 23, 42, 0.05),
     0 20px 40px rgba(15, 23, 42, 0.16);
   transform-origin: top right;
   animation: pm-pop 0.16s ease-out;
 }
 
 @keyframes pm-pop {
-  from { opacity: 0; transform: translateY(-6px) scale(0.97); }
-  to   { opacity: 1; transform: translateY(0) scale(1); }
+  from {
+    opacity: 0;
+    transform: translateY(-6px) scale(0.97);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
 }
 
-/* User header */
+/* User information */
 .pm-root .pm-header {
   display: flex;
   align-items: center;
@@ -123,6 +143,12 @@ const styles = `
   text-overflow: ellipsis;
 }
 
+.pm-root .pm-email {
+  color: var(--pm-soft);
+  font-size: 11px;
+  overflow-wrap: anywhere;
+}
+
 .pm-root .pm-role {
   align-self: flex-start;
   padding: 2px 9px;
@@ -135,7 +161,7 @@ const styles = `
   background: color-mix(in srgb, var(--pm-brand) 12%, transparent);
 }
 
-/* Menu items (buttons and links) */
+/* Menu items */
 .pm-root .pm-item {
   display: flex;
   align-items: center;
@@ -197,18 +223,25 @@ const styles = `
 }
 
 @media (max-width: 480px) {
-  .pm-root .pm-dropdown { width: min(260px, calc(100vw - 24px)); }
+  .pm-root .pm-dropdown {
+    width: min(260px, calc(100vw - 24px));
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .pm-root .pm-dropdown { animation: none; }
+  .pm-root .pm-dropdown {
+    animation: none;
+  }
+
   .pm-root .pm-chevron,
   .pm-root .pm-trigger,
-  .pm-root .pm-item { transition: none; }
+  .pm-root .pm-item {
+    transition: none;
+  }
 }
 `;
 
-/* ---------- Inline SVG icons ---------- */
+/* ---------- SVG Icons ---------- */
 const Svg = ({ children, ...props }) => (
   <svg
     viewBox="0 0 24 24"
@@ -229,6 +262,7 @@ const ChevronIcon = () => (
     <path d="m6 9 6 6 6-6" />
   </Svg>
 );
+
 const DashboardIcon = () => (
   <Svg>
     <rect x="3" y="3" width="7" height="9" rx="1.5" />
@@ -237,17 +271,28 @@ const DashboardIcon = () => (
     <rect x="3" y="16" width="7" height="5" rx="1.5" />
   </Svg>
 );
+
+const HomeIcon = () => (
+  <Svg>
+    <path d="m3 10 9-7 9 7" />
+    <path d="M5 9v11h14V9" />
+    <path d="M9 20v-7h6v7" />
+  </Svg>
+);
+
 const HeartIcon = () => (
   <Svg>
     <path d="M12 20s-7-4.4-9-9a5 5 0 0 1 9-3 5 5 0 0 1 9 3c-2 4.6-9 9-9 9z" />
   </Svg>
 );
+
 const UserIcon = () => (
   <Svg>
     <circle cx="12" cy="8" r="4" />
     <path d="M4 21c0-4 3.6-7 8-7s8 3 8 7" />
   </Svg>
 );
+
 const LogoutIcon = () => (
   <Svg>
     <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
@@ -255,13 +300,29 @@ const LogoutIcon = () => (
   </Svg>
 );
 
+/* ---------- Profile Menu Component ---------- */
 export default function ProfileMenu() {
-  const user = getCurrentUser();
   const navigate = useNavigate();
-  const [profileOpen, setProfileOpen] = useState(false);
+  const location = useLocation();
   const menuRef = useRef(null);
 
-  /* Close on outside click and Escape */
+  const [profileOpen, setProfileOpen] = useState(false);
+
+  // Detect whether the current page belongs to Admin.
+  const isAdminPage = location.pathname.startsWith("/admin");
+
+  // Admin and normal users use different sessions.
+  const user = isAdminPage ? getCurrentAdmin() : getCurrentUser();
+
+  // Support common user name field variations.
+  const displayName =
+    user?.username || user?.name || user?.full_name || user?.email || "User";
+
+  const displayRole = user?.role || "USER";
+
+  const initial = displayName.trim().charAt(0).toUpperCase() || "U";
+
+  // Close dropdown when clicking outside or pressing Escape.
   useEffect(() => {
     if (!profileOpen) return;
 
@@ -272,7 +333,9 @@ export default function ProfileMenu() {
     };
 
     const handleEscape = (event) => {
-      if (event.key === "Escape") setProfileOpen(false);
+      if (event.key === "Escape") {
+        setProfileOpen(false);
+      }
     };
 
     document.addEventListener("mousedown", handleClickOutside);
@@ -284,33 +347,56 @@ export default function ProfileMenu() {
     };
   }, [profileOpen]);
 
-  const handleLogout = () => {
-    logout();
-    window.location.href = "/login";
-  };
+  // Close the dropdown after route changes.
+  useEffect(() => {
+    setProfileOpen(false);
+  }, [location.pathname]);
 
-  const handleDashboard = () => {
+  // Sign out from the correct session.
+  const handleLogout = () => {
     setProfileOpen(false);
 
-    if (user?.role === "PATIENT") {
-      navigate("/patient/dashboard");
-    } else if (user?.role === "DOCTOR") {
-      navigate("/doctor/dashboard");
-    } else if (user?.role === "ADMIN") {
-      navigate("/admin/dashboard");
+    if (isAdminPage) {
+      logoutAdmin();
+      navigate("/admin/login", { replace: true });
+    } else {
+      logout();
+      navigate("/login", { replace: true });
     }
   };
 
+  // Navigate to the correct dashboard.
+  const handleDashboard = () => {
+    setProfileOpen(false);
+
+    switch (displayRole.toUpperCase()) {
+      case "ADMIN":
+        navigate("/admin/dashboard");
+        break;
+
+      case "DOCTOR":
+        navigate("/doctor/dashboard");
+        break;
+
+      case "PATIENT":
+        navigate("/patient/dashboard");
+        break;
+
+      default:
+        navigate("/login");
+    }
+  };
+
+  // Do not display the menu when the relevant session is missing.
   if (!user) {
     return null;
   }
-
-  const initial = user.username?.charAt(0).toUpperCase() || "U";
 
   return (
     <div className="pm-root" ref={menuRef}>
       <style>{styles}</style>
 
+      {/* Avatar button */}
       <button
         type="button"
         className="pm-trigger"
@@ -323,16 +409,34 @@ export default function ProfileMenu() {
         <ChevronIcon />
       </button>
 
+      {/* Dropdown menu */}
       {profileOpen && (
         <div className="pm-dropdown" role="menu">
+          {/* User details */}
           <div className="pm-header">
             <span className="pm-avatar pm-avatar--lg">{initial}</span>
+
             <div className="pm-user">
-              <strong className="pm-name">{user.username}</strong>
-              <span className="pm-role">{user.role}</span>
+              <strong className="pm-name">{displayName}</strong>
+
+              {user.email && <span className="pm-email">{user.email}</span>}
+
+              <span className="pm-role">{displayRole}</span>
             </div>
           </div>
 
+          {/* Home */}
+          <Link
+            to="/"
+            className="pm-item"
+            role="menuitem"
+            onClick={() => setProfileOpen(false)}
+          >
+            <HomeIcon />
+            Home
+          </Link>
+
+          {/* Dashboard */}
           <button
             type="button"
             className="pm-item"
@@ -343,7 +447,8 @@ export default function ProfileMenu() {
             Dashboard
           </button>
 
-          {user.role === "PATIENT" && (
+          {/* Patient-only health profile */}
+          {displayRole.toUpperCase() === "PATIENT" && (
             <Link
               to="/patient/health-profile"
               className="pm-item"
@@ -355,6 +460,7 @@ export default function ProfileMenu() {
             </Link>
           )}
 
+          {/* General profile */}
           <Link
             to="/profile"
             className="pm-item"
@@ -367,6 +473,7 @@ export default function ProfileMenu() {
 
           <div className="pm-divider" />
 
+          {/* Logout */}
           <button
             type="button"
             className="pm-item pm-item--danger"

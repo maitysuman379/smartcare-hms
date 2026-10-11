@@ -1,14 +1,20 @@
 import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
+
+import ProfileMenu from "../components/ProfileMenu.jsx";
 import {
   getMyProfile,
   updateMyProfile,
   getToken,
+  getCurrentUser,
   saveAuth,
+  logout,
 } from "../services/api.js";
 
-/* ---------- Styles (kept inside this file, unique "pp-" class names) ---------- */
+/* ---------- Styles (self-contained: every rule is scoped under .pp-page) ---------- */
 const styles = `
 .pp-page {
+  --pp-bg: #f3f8f8;
   --pp-card: #ffffff;
   --pp-text: #0f2f33;
   --pp-soft: #5b7479;
@@ -25,20 +31,96 @@ const styles = `
   --pp-shadow: 0 1px 2px rgba(15, 47, 51, 0.05),
     0 8px 24px rgba(15, 47, 51, 0.07);
 
-  max-width: 960px;
-  margin: 0;
-  padding: 0 0 56px;
-  display: flex;
-  flex-direction: column;
-  gap: 22px;
+  /* Full-screen page that does not depend on the app layout */
+  position: fixed;
+  inset: 0;
+  z-index: 1500;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+  background: var(--pp-bg);
   color: var(--pp-text);
   font-family: "Inter", system-ui, -apple-system, "Segoe UI", sans-serif;
+  font-size: 16px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
 }
 
 .pp-page *,
 .pp-page *::before,
 .pp-page *::after {
   box-sizing: border-box;
+}
+
+.pp-page :where(h1, h2, h3, p) {
+  margin: 0;
+}
+
+.pp-page :is(h1, h2, h3) {
+  font-family: inherit;
+}
+
+.pp-page :focus-visible {
+  outline: 2px solid var(--pp-brand);
+  outline-offset: 2px;
+}
+
+/* Top bar */
+.pp-page .pp-topbar {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  background: rgba(255, 255, 255, 0.92);
+  backdrop-filter: blur(8px);
+  border-bottom: 1px solid var(--pp-border);
+}
+
+.pp-page .pp-topbar-inner {
+  max-width: 960px;
+  margin: 0 auto;
+  padding: 10px 20px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.pp-page .pp-topbar-left {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  min-width: 0;
+}
+
+.pp-page .pp-brand {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 15px;
+  font-weight: 800;
+  color: var(--pp-brand);
+}
+
+.pp-page .pp-brand-mark {
+  width: 26px;
+  height: 26px;
+  flex-shrink: 0;
+  display: grid;
+  place-items: center;
+  border-radius: 7px;
+  background: var(--pp-brand);
+  color: #ffffff;
+  font-weight: 800;
+}
+
+/* Page body */
+.pp-page .pp-main {
+  max-width: 960px;
+  margin: 0 auto;
+  padding: 28px 20px 64px;
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
 }
 
 /* Header */
@@ -58,12 +140,12 @@ const styles = `
   margin: 12px 0 6px;
   font-size: clamp(28px, 4vw, 38px);
   font-weight: 800;
+  line-height: 1.15;
   letter-spacing: -0.02em;
   color: var(--pp-text);
 }
 
 .pp-page .pp-subtitle {
-  margin: 0;
   font-size: 15px;
   color: var(--pp-soft);
 }
@@ -84,12 +166,18 @@ const styles = `
   box-shadow: 0 16px 40px rgba(15, 76, 85, 0.28);
 }
 
+.pp-page .pp-avatar-wrap {
+  position: relative;
+  flex-shrink: 0;
+}
+
 .pp-page .pp-avatar {
+  position: relative;
   width: 96px;
   height: 96px;
-  flex-shrink: 0;
   display: grid;
   place-items: center;
+  overflow: hidden;
   border-radius: 50%;
   font-size: 38px;
   font-weight: 800;
@@ -99,14 +187,69 @@ const styles = `
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
 }
 
+.pp-page .pp-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.pp-page .pp-avatar-overlay {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  background: rgba(11, 66, 71, 0.65);
+  color: #ffffff;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.pp-page .pp-camera {
+  position: absolute;
+  right: 0;
+  bottom: 4px;
+  width: 34px;
+  height: 34px;
+  margin: 0;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: #ffffff;
+  color: var(--pp-brand);
+  border: 1px solid var(--pp-border);
+  cursor: pointer;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
+  transition: transform 0.2s ease, background 0.2s ease, color 0.2s ease;
+}
+
+.pp-page .pp-camera svg {
+  width: 17px;
+  height: 17px;
+}
+
+.pp-page .pp-camera:hover {
+  transform: scale(1.1);
+  background: var(--pp-brand);
+  color: var(--pp-mint);
+}
+
+.pp-page .pp-camera--busy {
+  pointer-events: none;
+  opacity: 0.7;
+}
+
+.pp-page .pp-file-input {
+  display: none;
+}
+
 .pp-page .pp-hero-info {
   min-width: 0;
 }
 
 .pp-page .pp-hero-name {
-  margin: 0;
   font-size: 26px;
   font-weight: 800;
+  line-height: 1.2;
   letter-spacing: -0.01em;
   color: #ffffff;
 }
@@ -166,67 +309,6 @@ const styles = `
   100% { box-shadow: 0 0 0 0 transparent; }
 }
 
-/* Photo upload */
-.pp-page .pp-avatar-wrap {
-  position: relative;
-  flex-shrink: 0;
-}
-
-.pp-page .pp-avatar {
-  position: relative;
-  overflow: hidden;
-}
-
-.pp-page .pp-avatar img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-}
-
-.pp-page .pp-avatar-overlay {
-  position: absolute;
-  inset: 0;
-  display: grid;
-  place-items: center;
-  background: rgba(11, 66, 71, 0.65);
-  color: #fff;
-  font-size: 12px;
-  font-weight: 700;
-}
-
-.pp-page .pp-camera {
-  position: absolute;
-  right: 0;
-  bottom: 4px;
-  width: 34px;
-  height: 34px;
-  display: grid;
-  place-items: center;
-  border-radius: 50%;
-  background: #ffffff;
-  color: var(--pp-brand);
-  border: 1px solid var(--pp-border);
-  cursor: pointer;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
-  transition: transform 0.2s ease, background 0.2s ease, color 0.2s ease;
-}
-
-.pp-page .pp-camera svg {
-  width: 17px;
-  height: 17px;
-}
-
-.pp-page .pp-camera:hover {
-  transform: scale(1.1);
-  background: var(--pp-brand);
-  color: var(--pp-mint);
-}
-
-.pp-page .pp-camera--busy {
-  pointer-events: none;
-  opacity: 0.7;
-}
-
 .pp-page .pp-photo-error {
   margin: 10px 0 0;
   padding: 6px 12px;
@@ -276,7 +358,6 @@ const styles = `
 }
 
 .pp-page .pp-card-title {
-  margin: 0;
   font-size: 18px;
   font-weight: 700;
   color: var(--pp-text);
@@ -326,6 +407,7 @@ const styles = `
   font-family: inherit;
   font-size: 13px;
   font-weight: 700;
+  line-height: 1.2;
   cursor: pointer;
   transition: background 0.2s ease, border-color 0.2s ease,
     transform 0.1s ease;
@@ -401,6 +483,7 @@ const styles = `
 }
 
 .pp-page .pp-label {
+  display: block;
   margin: 0;
   font-size: 11px;
   font-weight: 700;
@@ -433,11 +516,13 @@ const styles = `
 }
 
 .pp-page .pp-input {
+  display: block;
   width: 100%;
   min-height: 42px;
   padding: 10px 12px;
   font-family: inherit;
   font-size: 15px;
+  line-height: 1.4;
   color: var(--pp-text);
   background: #ffffff;
   border: 1px solid var(--pp-border);
@@ -457,7 +542,6 @@ const styles = `
 
 .pp-page .pp-hint {
   grid-column: 1 / -1;
-  margin: 0;
   font-size: 12px;
   color: var(--pp-soft);
 }
@@ -471,7 +555,6 @@ const styles = `
 }
 
 .pp-page .pp-form-error {
-  margin: 0;
   padding: 10px 14px;
   border-radius: 12px;
   font-size: 13px;
@@ -491,7 +574,7 @@ const styles = `
   position: fixed;
   right: 20px;
   bottom: 20px;
-  z-index: 2000;
+  z-index: 30;
   padding: 12px 18px;
   border-radius: 12px;
   font-size: 14px;
@@ -539,13 +622,19 @@ const styles = `
 }
 
 .pp-page .pp-error h2 {
-  margin: 0;
   color: var(--pp-text);
 }
 
 .pp-page .pp-error p {
-  margin: 0;
   color: var(--pp-soft);
+}
+
+.pp-page .pp-error-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 10px;
+  margin-top: 10px;
 }
 
 .pp-page .pp-error-icon {
@@ -562,7 +651,8 @@ const styles = `
 
 /* Responsive */
 @media (max-width: 640px) {
-  .pp-page { padding: 0 0 40px; }
+  .pp-page .pp-topbar-inner { padding: 8px 14px; }
+  .pp-page .pp-main { padding: 18px 14px 40px; }
 
   .pp-page .pp-hero {
     flex-direction: column;
@@ -584,6 +674,10 @@ const styles = `
     bottom: 14px;
     text-align: center;
   }
+}
+
+@media (max-width: 480px) {
+  .pp-page .pp-brand-name { display: none; }
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -626,18 +720,21 @@ const ShieldIcon = () => (
     <path d="m9 12 2 2 4-4" />
   </Svg>
 );
-
 const CameraIcon = () => (
   <Svg>
     <path d="M4 8h3l2-3h6l2 3h3v11H4z" />
     <circle cx="12" cy="13" r="3.5" />
   </Svg>
 );
-
 const PencilIcon = () => (
   <Svg>
     <path d="M4 20h4L19 9l-4-4L4 16v4z" />
     <path d="m13.5 6.5 4 4" />
+  </Svg>
+);
+const ArrowLeftIcon = () => (
+  <Svg>
+    <path d="M19 12H5M12 19l-7-7 7-7" />
   </Svg>
 );
 
@@ -669,7 +766,14 @@ const GENDER_OPTIONS = [
 const PHONE_REGEX = /^\+?\d{10,13}$/;
 const PINCODE_REGEX = /^\d{6}$/;
 
+const ALLOWED_PHOTO_TYPES = ["image/jpeg", "image/png", "image/webp"];
+const MAX_PHOTO_BYTES = 8 * 1024 * 1024; // photos are shrunk before upload
+const AVATAR_SIZE = 256; // px, square
+
 /* ---------- Helpers (outside render) ---------- */
+const fieldsFor = (section) =>
+  section === "personal" ? PERSONAL_FIELDS : EMERGENCY_FIELDS;
+
 const pad = (n) => String(n).padStart(2, "0");
 
 const todayLocal = () => {
@@ -742,6 +846,15 @@ const clean = (value) => {
   return text === "" ? null : text;
 };
 
+// One normal form per field, used for saving AND for "did anything change?"
+const normalizeValue = (field, value) => {
+  if (PHONE_FIELDS.includes(field)) return clean(stripPhone(value));
+  if (field === "date_of_birth") return clean(toDateOnly(value));
+  if (field === "gender") return clean(String(value ?? "").toUpperCase());
+
+  return clean(value);
+};
+
 const validateDraft = (section, draft) => {
   const phoneOk = (value) =>
     !stripPhone(value) || PHONE_REGEX.test(stripPhone(value));
@@ -770,6 +883,40 @@ const validateDraft = (section, draft) => {
 
   return "";
 };
+
+// Centre-crop to a square and shrink, so the saved photo is small
+// (a few KB instead of megabytes) and always fits the request and database limits.
+const resizeImage = (file) =>
+  new Promise((resolve, reject) => {
+    const url = URL.createObjectURL(file);
+    const img = new Image();
+
+    img.onload = () => {
+      URL.revokeObjectURL(url);
+
+      const side = Math.min(img.width, img.height);
+      const sx = (img.width - side) / 2;
+      const sy = (img.height - side) / 2;
+
+      const canvas = document.createElement("canvas");
+      canvas.width = AVATAR_SIZE;
+      canvas.height = AVATAR_SIZE;
+
+      const ctx = canvas.getContext("2d");
+      ctx.fillStyle = "#ffffff";
+      ctx.fillRect(0, 0, AVATAR_SIZE, AVATAR_SIZE);
+      ctx.drawImage(img, sx, sy, side, side, 0, 0, AVATAR_SIZE, AVATAR_SIZE);
+
+      resolve(canvas.toDataURL("image/jpeg", 0.82));
+    };
+
+    img.onerror = () => {
+      URL.revokeObjectURL(url);
+      reject(new Error("Could not read that image. Try a different file."));
+    };
+
+    img.src = url;
+  });
 
 /* ---------- Small components (outside render so inputs keep focus) ---------- */
 function InfoItem({ label, value, full = false, valueClass = "" }) {
@@ -910,19 +1057,47 @@ function Card({
   );
 }
 
-function Shell({ children }) {
+// The page frame: its own top bar and scroll area, independent of the app layout
+function Shell({ onBack, children }) {
   return (
     <div className="pp-page">
       <style>{styles}</style>
-      {children}
+
+      <header className="pp-topbar">
+        <div className="pp-topbar-inner">
+          <div className="pp-topbar-left">
+            <button
+              type="button"
+              className="pp-btn pp-btn--ghost"
+              onClick={onBack}
+            >
+              <ArrowLeftIcon />
+              Back
+            </button>
+
+            <div className="pp-brand">
+              <span className="pp-brand-mark">+</span>
+              <span className="pp-brand-name">SmartCare HMS</span>
+            </div>
+          </div>
+
+          <ProfileMenu />
+        </div>
+      </header>
+
+      <main className="pp-main">{children}</main>
     </div>
   );
 }
 
 function MyProfile() {
+  const navigate = useNavigate();
+
   const [profile, setProfile] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [reloadKey, setReloadKey] = useState(0);
+
   const [savingPhoto, setSavingPhoto] = useState(false);
   const [photoError, setPhotoError] = useState("");
   const [previewImage, setPreviewImage] = useState("");
@@ -934,24 +1109,33 @@ function MyProfile() {
   const [formError, setFormError] = useState("");
   const [saveMessage, setSaveMessage] = useState("");
 
+  // Load the profile (and again when "Try again" is pressed)
   useEffect(() => {
+    let ignore = false;
+
     const loadProfile = async () => {
       try {
         setLoading(true);
         setError("");
 
         const response = await getMyProfile();
-        setProfile(response.user);
+
+        if (!ignore) setProfile(response.user);
       } catch (err) {
         console.error("Failed to load profile:", err);
-        setError(err.message || "Failed to load profile");
+
+        if (!ignore) setError(err.message || "Failed to load profile");
       } finally {
-        setLoading(false);
+        if (!ignore) setLoading(false);
       }
     };
 
     loadProfile();
-  }, []);
+
+    return () => {
+      ignore = true;
+    };
+  }, [reloadKey]);
 
   // Hide the "saved" message after a few seconds
   useEffect(() => {
@@ -961,6 +1145,47 @@ function MyProfile() {
 
     return () => clearTimeout(timer);
   }, [saveMessage]);
+
+  // Escape cancels the card being edited (only when focus is inside it)
+  useEffect(() => {
+    if (!editing) return undefined;
+
+    const onKeyDown = (event) => {
+      if (event.key !== "Escape" || saving) return;
+
+      if (
+        event.target instanceof Element &&
+        event.target.closest(".pp-card--editing")
+      ) {
+        setEditing(null);
+        setDraft({});
+        setFormError("");
+      }
+    };
+
+    document.addEventListener("keydown", onKeyDown);
+
+    return () => document.removeEventListener("keydown", onKeyDown);
+  }, [editing, saving]);
+
+  const goBack = () => {
+    if (window.history.length > 1) {
+      navigate(-1);
+      return;
+    }
+
+    const role = getCurrentUser()?.role;
+
+    if (role === "ADMIN") navigate("/admin/dashboard");
+    else if (role === "DOCTOR") navigate("/doctor/dashboard");
+    else if (role === "PATIENT") navigate("/patient/dashboard");
+    else navigate("/");
+  };
+
+  const handleRelogin = () => {
+    logout();
+    navigate("/login", { replace: true });
+  };
 
   // Every field the update endpoint accepts, in the shape it expects.
   // Always sending the full set means a save can never blank out other fields.
@@ -981,22 +1206,25 @@ function MyProfile() {
 
   const buildPayload = (section, values) => {
     const payload = buildBase();
-    const fields = section === "personal" ? PERSONAL_FIELDS : EMERGENCY_FIELDS;
 
-    fields.forEach((field) => {
-      payload[field] = PHONE_FIELDS.includes(field)
-        ? clean(stripPhone(values[field]))
-        : clean(values[field]);
+    fieldsFor(section).forEach((field) => {
+      payload[field] = normalizeValue(field, values[field]);
     });
 
     return payload;
   };
 
+  const hasChanges = (section) =>
+    fieldsFor(section).some(
+      (field) =>
+        normalizeValue(field, draft[field]) !==
+        normalizeValue(field, profile[field]),
+    );
+
   const startEdit = (section) => {
-    const fields = section === "personal" ? PERSONAL_FIELDS : EMERGENCY_FIELDS;
     const next = {};
 
-    fields.forEach((field) => {
+    fieldsFor(section).forEach((field) => {
       if (field === "date_of_birth") {
         next[field] = toDateOnly(profile[field]);
       } else if (field === "gender") {
@@ -1008,6 +1236,7 @@ function MyProfile() {
 
     setDraft(next);
     setFormError("");
+    setSaveMessage("");
     setEditing(section);
   };
 
@@ -1039,6 +1268,12 @@ function MyProfile() {
       return;
     }
 
+    if (!hasChanges(section)) {
+      cancelEdit();
+      setSaveMessage("No changes to save.");
+      return;
+    }
+
     try {
       setSaving(true);
       setFormError("");
@@ -1046,7 +1281,8 @@ function MyProfile() {
       const payload = buildPayload(section, draft);
       const response = await updateMyProfile(payload);
 
-      setProfile(response.user ? response.user : { ...profile, ...payload });
+      // Server values win; anything it did not send back falls back to what we saved
+      setProfile({ ...profile, ...payload, ...(response.user || {}) });
       setEditing(null);
       setDraft({});
       setSaveMessage(
@@ -1062,75 +1298,58 @@ function MyProfile() {
     }
   };
 
-  const handleImageChange = (event) => {
+  const handleImageChange = async (event) => {
     const file = event.target.files?.[0];
 
-    if (!file) return;
+    // Allow picking the same file again later
+    event.target.value = "";
+
+    if (!file || savingPhoto) return;
 
     setPhotoError("");
+    setSaveMessage("");
 
-    const allowedTypes = ["image/jpeg", "image/png", "image/webp"];
-
-    if (!allowedTypes.includes(file.type)) {
+    if (!ALLOWED_PHOTO_TYPES.includes(file.type)) {
       setPhotoError("Please select a JPG, PNG, or WebP image.");
-      event.target.value = "";
       return;
     }
 
-    if (file.size > 2 * 1024 * 1024) {
-      setPhotoError("Image size must be less than 2 MB.");
-      event.target.value = "";
+    if (file.size > MAX_PHOTO_BYTES) {
+      setPhotoError("Image size must be less than 8 MB.");
       return;
     }
 
-    const reader = new FileReader();
+    try {
+      setSavingPhoto(true);
 
-    reader.onload = async () => {
-      try {
-        const base64Image = reader.result;
+      const resized = await resizeImage(file);
+      setPreviewImage(resized);
 
-        setPreviewImage(base64Image);
-        setSavingPhoto(true);
+      const payload = { ...buildBase(), profile_image: resized };
+      const response = await updateMyProfile(payload);
 
-        const response = await updateMyProfile({
-          ...buildBase(),
-          profile_image: base64Image,
-        });
+      const updated = { ...profile, ...payload, ...(response.user || {}) };
+      setProfile(updated);
 
-        if (response.success && response.user) {
-          setProfile(response.user);
+      const token = getToken();
 
-          const token = getToken();
-
-          if (token) {
-            saveAuth({ token, user: response.user });
-          }
-
-          setPreviewImage("");
-          setPhotoError("");
-        }
-      } catch (err) {
-        console.error("Failed to save profile photo:", err);
-        setPhotoError(err.message || "Failed to save profile photo.");
-        setPreviewImage("");
-      } finally {
-        setSavingPhoto(false);
+      if (token) {
+        saveAuth({ token, user: { ...getCurrentUser(), ...updated } });
       }
-    };
 
-    reader.onerror = () => {
-      setPhotoError("Failed to read the selected image.");
+      setSaveMessage("Profile photo updated.");
+    } catch (err) {
+      console.error("Failed to save profile photo:", err);
+      setPhotoError(err.message || "Failed to save profile photo.");
+    } finally {
+      setPreviewImage("");
       setSavingPhoto(false);
-    };
-
-    reader.readAsDataURL(file);
-
-    event.target.value = "";
+    }
   };
 
   if (loading) {
     return (
-      <Shell>
+      <Shell onBack={goBack}>
         <div className="pp-loading">
           <div className="pp-spinner"></div>
           <p>Loading your profile...</p>
@@ -1140,12 +1359,34 @@ function MyProfile() {
   }
 
   if (error) {
+    const authProblem = /token|expired|unauthor|authoriz|log in/i.test(error);
+
     return (
-      <Shell>
+      <Shell onBack={goBack}>
         <div className="pp-error">
           <div className="pp-error-icon">!</div>
           <h2>Unable to load profile</h2>
           <p>{error}</p>
+
+          <div className="pp-error-actions">
+            <button
+              type="button"
+              className="pp-btn pp-btn--primary"
+              onClick={() => setReloadKey((key) => key + 1)}
+            >
+              Try again
+            </button>
+
+            {authProblem && (
+              <button
+                type="button"
+                className="pp-btn pp-btn--ghost"
+                onClick={handleRelogin}
+              >
+                Log in again
+              </button>
+            )}
+          </div>
         </div>
       </Shell>
     );
@@ -1153,7 +1394,7 @@ function MyProfile() {
 
   if (!profile) {
     return (
-      <Shell>
+      <Shell onBack={goBack}>
         <div className="pp-error">
           <h2>Profile not found</h2>
           <p>We couldn't find your profile information.</p>
@@ -1169,7 +1410,7 @@ function MyProfile() {
   const editingEmergency = editing === "emergency";
 
   return (
-    <Shell>
+    <Shell onBack={goBack}>
       {/* Page Header */}
       <div>
         <span className="pp-eyebrow">ACCOUNT</span>
@@ -1202,10 +1443,10 @@ function MyProfile() {
           <input
             id="pp-photo-input"
             type="file"
+            className="pp-file-input"
             accept="image/jpeg,image/png,image/webp"
             onChange={handleImageChange}
             disabled={savingPhoto}
-            hidden
           />
         </div>
 
