@@ -1,5 +1,8 @@
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
+const crypto = require("crypto");
+
+const pool = require("../config/db");
 
 const { findUserByEmail, findUserByUsername } = require("../models/userModel");
 
@@ -32,7 +35,7 @@ const ACCOUNT_STATUS_MESSAGES = {
 };
 
 // ================================
-// REGISTER
+// REGISTER PATIENT OR DOCTOR
 // ================================
 
 const register = async (req, res) => {
@@ -60,7 +63,6 @@ const register = async (req, res) => {
       });
     }
 
-    // Required fields.
     if (!username || !email || !password) {
       return res.status(400).json({
         success: false,
@@ -75,7 +77,6 @@ const register = async (req, res) => {
       });
     }
 
-    // Password validation.
     if (
       typeof password !== "string" ||
       password.length < 8 ||
@@ -88,7 +89,6 @@ const register = async (req, res) => {
       });
     }
 
-    // Email format validation.
     const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
     if (!emailPattern.test(email)) {
@@ -98,7 +98,6 @@ const register = async (req, res) => {
       });
     }
 
-    // Check username.
     const existingUsername = await findUserByUsername(username);
 
     if (existingUsername) {
@@ -108,7 +107,6 @@ const register = async (req, res) => {
       });
     }
 
-    // Check email.
     const existingEmail = await findUserByEmail(email);
 
     if (existingEmail) {
@@ -118,7 +116,6 @@ const register = async (req, res) => {
       });
     }
 
-    // OTP verification is required for both roles.
     if (!otp || (typeof otp !== "string" && typeof otp !== "number")) {
       return res.status(400).json({
         success: false,
@@ -135,10 +132,8 @@ const register = async (req, res) => {
       });
     }
 
-    // Hash the password using the existing mechanism.
     const passwordHash = await bcrypt.hash(password, 10);
 
-    // Create user and associated patient/application atomically.
     const account = await createRegisteredAccount({
       username,
       email,
@@ -146,14 +141,12 @@ const register = async (req, res) => {
       role: requestedRole,
     });
 
-    // OTP is deleted only after successful account creation.
     try {
       await deleteOtps(email);
     } catch (cleanupError) {
       console.error("OTP cleanup error:", cleanupError);
     }
 
-    // Doctor registration response.
     if (requestedRole === "DOCTOR") {
       return res.status(201).json({
         success: true,
@@ -172,7 +165,6 @@ const register = async (req, res) => {
       });
     }
 
-    // Existing patient registration response.
     return res.status(201).json({
       success: true,
       message: "User registered successfully.",
@@ -229,7 +221,6 @@ const login = async (req, res) => {
       });
     }
 
-    // Verify password before revealing account status.
     const passwordMatch = await bcrypt.compare(password, user.password_hash);
 
     if (!passwordMatch) {
@@ -239,7 +230,6 @@ const login = async (req, res) => {
       });
     }
 
-    // Do not issue a JWT to non-active accounts.
     if (user.status !== "ACTIVE") {
       return res.status(403).json({
         success: false,
@@ -294,7 +284,184 @@ const login = async (req, res) => {
   }
 };
 
+// ================================
+// ONE-TIME ADMIN SETUP
+// ================================
+
+const setupAdmin = async (req, res) => {
+  let connection;
+  let lockAcquired = false;
+
+  try {
+    const expectedSecret = process.env.ADMIN_SETUP_SECRET;
+    const providedSecret = req.get("x-admin-setup-secret") || "";
+
+    if (
+      typeof expectedSecret !== "string" ||
+      expectedSecret.length < 32 ||
+      !providedSecret
+    ) {
+      return res.status(403).json({
+        success: false,
+        message: "Admin setup is not authorized.",
+      });
+    }
+
+    const expectedBuffer = Buffer.from(expectedSecret, "utf8");
+    const providedBuffer = Buffer.from(providedSecret, "utf8");
+
+    if (
+      expectedBuffer.length !== providedBuffer.length ||
+      !crypto.timingSafeEqual(expectedBuffer, providedBuffer)
+    ) {
+      return res.status(403).json({
+        success: false,
+        message: "Admin setup is not authorized.",
+      });
+    }
+
+    const username =
+      typeof req.body.username === "string" ? req.body.username.trim() : "";
+
+    const email = String(req.body.email || "")
+      .trim()
+      .toLowerCase();
+
+    const password = req.body.password;
+
+    if (!username || !email || typeof password !== "string") {
+      return res.status(400).json({
+        success: false,
+        message: "Username, email and password are required.",
+      });
+    }
+
+    if (username.length > 100 || email.length > 150) {
+      return res.status(400).json({
+        success: false,
+        message: "Username or email exceeds the allowed length.",
+      });
+    }
+
+    if (password.length < 12 || Buffer.byteLength(password, "utf8") > 72) {
+      return res.status(400).json({
+        success: false,
+        message:
+          "Password must be at least 12 characters and no more than 72 UTF-8 bytes.",
+      });
+    }
+
+    const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+    if (!emailPattern.test(email)) {
+      return res.status(400).json({
+        success: false,
+        message: "Please provide a valid email address.",
+      });
+    }
+
+    connection = await pool.getConnection();
+
+    // Serialize setup requests using a MySQL advisory lock.
+    const [lockRows] = await connection.query(
+      "SELECT GET_LOCK(?, 10) AS acquired",
+      ["smartcare_hms_admin_setup"],
+    );
+
+    if (Number(lockRows[0]?.acquired) !== 1) {
+      return res.status(503).json({
+        success: false,
+        message: "Admin setup is busy. Please try again.",
+      });
+    }
+
+    lockAcquired = true;
+
+    // Only permit initial setup if no Admin exists.
+    const [adminRows] = await connection.query(
+      "SELECT id FROM users WHERE role = 'ADMIN' LIMIT 1",
+    );
+
+    if (adminRows.length > 0) {
+      return res.status(409).json({
+        success: false,
+        message: "An Admin account already exists.",
+      });
+    }
+
+    // Check username and email against existing users.
+    const [existingRows] = await connection.query(
+      `SELECT id
+       FROM users
+       WHERE email = ? OR username = ?
+       LIMIT 1`,
+      [email, username],
+    );
+
+    if (existingRows.length > 0) {
+      return res.status(409).json({
+        success: false,
+        message: "Username or email already exists.",
+      });
+    }
+
+    const passwordHash = await bcrypt.hash(password, 10);
+
+    const [result] = await connection.query(
+      `INSERT INTO users
+        (username, email, password_hash, role, status)
+       VALUES (?, ?, ?, 'ADMIN', 'ACTIVE')`,
+      [username, email, passwordHash],
+    );
+
+    return res.status(201).json({
+      success: true,
+      message: "Admin account created successfully.",
+      user: {
+        id: result.insertId,
+        username,
+        email,
+        role: "ADMIN",
+        status: "ACTIVE",
+      },
+    });
+  } catch (error) {
+    console.error("Admin setup error:", error.code || error.message);
+
+    if (error.code === "ER_DUP_ENTRY") {
+      return res.status(409).json({
+        success: false,
+        message: "Username or email already exists.",
+      });
+    }
+
+    return res.status(500).json({
+      success: false,
+      message: "Admin setup failed. Please try again.",
+    });
+  } finally {
+    if (connection) {
+      try {
+        if (lockAcquired) {
+          await connection.query("SELECT RELEASE_LOCK(?)", [
+            "smartcare_hms_admin_setup",
+          ]);
+        }
+      } catch (releaseError) {
+        console.error("Admin setup lock release failed.");
+      } finally {
+        connection.release();
+      }
+    }
+  }
+};
+
+// ================================
+// EXPORT CONTROLLERS
+// ================================
+
 module.exports = {
   register,
   login,
+  setupAdmin,
 };

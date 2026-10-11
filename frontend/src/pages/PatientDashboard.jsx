@@ -9,6 +9,22 @@ import {
   getPatientAppointments,
 } from "../services/api.js";
 
+// Backend statuses: SCHEDULED, CONFIRMED, COMPLETED, CANCELLED, NO_SHOW
+const statusLabel = (status) =>
+  String(status || "")
+    .toLowerCase()
+    .replace(/_/g, " ")
+    .replace(/^\w/, (c) => c.toUpperCase());
+
+const statusClass = (status) => {
+  const value = String(status || "").toUpperCase();
+
+  if (value === "COMPLETED") return "badge-low";
+  if (value === "CANCELLED" || value === "NO_SHOW") return "badge-high";
+
+  return "badge-medium";
+};
+
 export default function PatientDashboard() {
   const [patient, setPatient] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -31,6 +47,8 @@ export default function PatientDashboard() {
     date: "",
     time: "",
   });
+  const [bookingLoading, setBookingLoading] = useState(false);
+  const [bookingMessage, setBookingMessage] = useState("");
   const [error, setError] = useState("");
 
   // ==========================================
@@ -62,32 +80,32 @@ export default function PatientDashboard() {
   // LOAD PATIENT APPOINTMENTS
   // ==========================================
 
-  useEffect(() => {
-    async function fetchAppointments() {
-      if (!patient?.id) return;
+  const loadAppointments = async (patientId) => {
+    try {
+      const data = await getPatientAppointments(patientId);
 
-      try {
-        const data = await getPatientAppointments(patient.id);
+      const formatted = (data.appointments || []).map((appt) => ({
+        id: appt.id,
+        appointment_code: appt.appointment_code,
+        doctor: appt.doctor_name,
+        specialization: appt.specialization,
+        date: appt.appointment_date
+          ? String(appt.appointment_date).slice(0, 10)
+          : "",
+        time: appt.appointment_time,
+        status: appt.status,
+      }));
 
-        const formattedAppointments = (data.appointments || []).map((appt) => ({
-          id: appt.id,
-          appointment_code: appt.appointment_code,
-          doctor: appt.doctor_name,
-          specialization: appt.specialization,
-          date: appt.appointment_date
-            ? String(appt.appointment_date).slice(0, 10)
-            : "",
-          time: appt.appointment_time,
-          status: appt.status,
-        }));
-
-        setAppointments(formattedAppointments);
-      } catch (err) {
-        console.error("Failed to load appointments:", err);
-      }
+      setAppointments(formatted);
+    } catch (err) {
+      console.error("Failed to load appointments:", err);
     }
+  };
 
-    fetchAppointments();
+  useEffect(() => {
+    if (patient?.id) {
+      loadAppointments(patient.id);
+    }
   }, [patient]);
 
   // ==========================================
@@ -193,6 +211,36 @@ export default function PatientDashboard() {
 
   const realMatchedDoctor = findMatchedDoctor(prediction, doctors);
 
+  // Risk level shown on the AI card
+  const riskPercent = prediction ? Number(prediction.risk_percentage) : 0;
+  const riskLabel =
+    riskPercent >= 70 ? "HIGH" : riskPercent >= 40 ? "MEDIUM" : "LOW";
+  const riskClass =
+    riskPercent >= 70
+      ? "badge-high"
+      : riskPercent >= 40
+        ? "badge-medium"
+        : "badge-low";
+
+  // Vitals tiles
+  const vitalTiles = vitals
+    ? [
+        { label: "BMI", value: Number(vitals.bmi), unit: "" },
+        {
+          label: "Blood Pressure",
+          value: `${Number(vitals.blood_pressure_systolic)}/${Number(
+            vitals.blood_pressure_diastolic,
+          )}`,
+          unit: "mmHg",
+        },
+        {
+          label: "Glucose",
+          value: Number(vitals.blood_glucose),
+          unit: "mg/dL",
+        },
+      ]
+    : [];
+
   const formatTime = (time) => {
     if (!time) return "";
 
@@ -219,6 +267,7 @@ export default function PatientDashboard() {
   const handleBookingSubmit = async (e) => {
     e.preventDefault();
     setError("");
+    setBookingMessage("");
 
     if (!bookingForm.date || !bookingForm.time) {
       setError("Please select both a date and a time.");
@@ -231,6 +280,8 @@ export default function PatientDashboard() {
     }
 
     try {
+      setBookingLoading(true);
+
       const appointmentCode = `APT-${Date.now()}`;
 
       await createAppointment({
@@ -242,26 +293,17 @@ export default function PatientDashboard() {
         reason: "AI-recommended doctor appointment",
       });
 
-      const newAppointment = {
-        id: appointmentCode,
-        doctor: realMatchedDoctor.name,
-        specialization: realMatchedDoctor.specialization,
-        date: bookingForm.date,
-        time: bookingForm.time,
-        status: "Pending",
-      };
-
-      setAppointments((prev) => [newAppointment, ...prev]);
+      // Reload from the server so the list always matches the database
+      await loadAppointments(patient.id);
 
       setShowBookingForm(false);
-
-      setBookingForm({
-        date: "",
-        time: "",
-      });
+      setBookingForm({ date: "", time: "" });
+      setBookingMessage(`Appointment booked with ${realMatchedDoctor.name}.`);
     } catch (err) {
       console.error("Failed to book appointment:", err);
       setError(err.message || "Failed to book appointment.");
+    } finally {
+      setBookingLoading(false);
     }
   };
 
@@ -355,60 +397,34 @@ export default function PatientDashboard() {
           AI PREDICTION + MATCHED DOCTOR
       ========================================== */}
 
-      <div className="grid grid-2" style={{ marginBottom: 20 }}>
+      <div className="grid grid-2 dash-block">
         {/* AI Prediction card */}
 
         <div className="card">
-          <h3 style={{ marginBottom: 12 }}>AI Health Assessment</h3>
+          <h3 className="card-title">AI Health Assessment</h3>
 
           {predictionLoading ? (
-            <p style={{ color: "var(--color-ink-soft)", fontSize: 14 }}>
-              Loading AI assessment...
-            </p>
+            <p className="empty-note">Loading AI assessment...</p>
           ) : predictionError ? (
             <p className="auth-error">{predictionError}</p>
           ) : !prediction ? (
-            <p style={{ color: "var(--color-ink-soft)", fontSize: 14 }}>
+            <p className="empty-note">
               No AI assessment yet. Submit your health profile to get one.
             </p>
           ) : (
             <>
-              <div
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 10,
-                  marginBottom: 10,
-                }}
-              >
-                <span
-                  className={`badge ${
-                    Number(prediction.risk_percentage) >= 70
-                      ? "badge-high"
-                      : Number(prediction.risk_percentage) >= 40
-                        ? "badge-medium"
-                        : "badge-low"
-                  }`}
-                >
-                  {Number(prediction.risk_percentage) >= 70
-                    ? "HIGH"
-                    : Number(prediction.risk_percentage) >= 40
-                      ? "MEDIUM"
-                      : "LOW"}{" "}
-                  RISK
-                </span>
+              <div className="risk-row">
+                <span className={`badge ${riskClass}`}>{riskLabel} RISK</span>
 
-                <span style={{ fontSize: 14, color: "var(--color-ink-soft)" }}>
-                  {Number(prediction.risk_percentage)}% risk score
-                </span>
+                <span className="risk-score">{riskPercent}% risk score</span>
               </div>
 
-              <p style={{ fontSize: 15, marginBottom: 4 }}>
+              <p className="condition-line">
                 Predicted condition:{" "}
                 <strong>{prediction.prediction_result}</strong>
               </p>
 
-              <p style={{ fontSize: 13, color: "var(--color-ink-soft)" }}>
+              <p className="small-note">
                 Based on your submitted vitals and symptoms.
               </p>
             </>
@@ -418,45 +434,40 @@ export default function PatientDashboard() {
         {/* Matched doctor card */}
 
         <div className="card">
-          <h3 style={{ marginBottom: 12 }}>Matched Doctor</h3>
+          <h3 className="card-title">Matched Doctor</h3>
 
           {doctorsLoading || predictionLoading ? (
-            <p style={{ color: "var(--color-ink-soft)", fontSize: 14 }}>
-              Finding your matched doctor...
-            </p>
+            <p className="empty-note">Finding your matched doctor...</p>
           ) : !realMatchedDoctor ? (
-            <p style={{ color: "var(--color-ink-soft)", fontSize: 14 }}>
-              No available doctor found right now.
-            </p>
+            <p className="empty-note">No available doctor found right now.</p>
           ) : (
             <>
-              <p style={{ fontSize: 15, marginBottom: 4 }}>
-                <strong>{realMatchedDoctor.name}</strong>
-              </p>
+              <p className="doctor-name">{realMatchedDoctor.name}</p>
 
-              <p
-                style={{
-                  fontSize: 14,
-                  color: "var(--color-ink-soft)",
-                  marginBottom: 14,
-                }}
-              >
+              <p className="doctor-meta">
                 {realMatchedDoctor.specialization} ·{" "}
                 {realMatchedDoctor.experience_years} years experience
               </p>
 
-              <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+              <div className="doctor-actions">
                 <span className="badge badge-low">Available</span>
 
                 {!showBookingForm && (
                   <button
                     className="btn btn-primary"
-                    onClick={() => setShowBookingForm(true)}
+                    onClick={() => {
+                      setBookingMessage("");
+                      setShowBookingForm(true);
+                    }}
                   >
                     Book Appointment
                   </button>
                 )}
               </div>
+
+              {bookingMessage && !showBookingForm && (
+                <p className="success-note">{bookingMessage}</p>
+              )}
             </>
           )}
 
@@ -490,14 +501,19 @@ export default function PatientDashboard() {
 
               {error && <p className="auth-error">{error}</p>}
 
-              <div style={{ display: "flex", gap: 10 }}>
-                <button type="submit" className="btn btn-primary">
-                  Confirm Booking
+              <div className="booking-actions">
+                <button
+                  type="submit"
+                  className="btn btn-primary"
+                  disabled={bookingLoading}
+                >
+                  {bookingLoading ? "Booking..." : "Confirm Booking"}
                 </button>
 
                 <button
                   type="button"
                   className="btn btn-outline"
+                  disabled={bookingLoading}
                   onClick={() => {
                     setShowBookingForm(false);
                     setError("");
@@ -513,68 +529,29 @@ export default function PatientDashboard() {
 
       {/* ==========================================
           HEALTH VITALS
-          ========================================== */}
+      ========================================== */}
 
-      <div className="card" style={{ marginBottom: 20 }}>
-        <h3 style={{ marginBottom: 16 }}>Health Vitals</h3>
+      <div className="card dash-block">
+        <h3 className="card-title">Health Vitals</h3>
 
         {vitalsLoading ? (
-          <p style={{ color: "var(--color-ink-soft)", fontSize: 14 }}>
-            Loading vitals...
-          </p>
+          <p className="empty-note">Loading vitals...</p>
         ) : vitalsError ? (
           <p className="auth-error">{vitalsError}</p>
         ) : !vitals ? (
-          <p style={{ color: "var(--color-ink-soft)", fontSize: 14 }}>
-            No vitals submitted yet.
-          </p>
+          <p className="empty-note">No vitals submitted yet.</p>
         ) : (
-          <div className="grid grid-3">
-            <div>
-              <p
-                style={{
-                  fontSize: 12,
-                  color: "var(--color-ink-soft)",
-                  marginBottom: 4,
-                }}
-              >
-                BMI
-              </p>
-              <p style={{ fontSize: 20, fontWeight: 700 }}>
-                {Number(vitals.bmi)}
-              </p>
-            </div>
+          <div className="vitals-grid">
+            {vitalTiles.map((tile) => (
+              <div key={tile.label} className="vital-tile">
+                <p className="vital-label">{tile.label}</p>
 
-            <div>
-              <p
-                style={{
-                  fontSize: 12,
-                  color: "var(--color-ink-soft)",
-                  marginBottom: 4,
-                }}
-              >
-                Blood Pressure
-              </p>
-              <p style={{ fontSize: 20, fontWeight: 700 }}>
-                {Number(vitals.blood_pressure_systolic)}/
-                {Number(vitals.blood_pressure_diastolic)}
-              </p>
-            </div>
-
-            <div>
-              <p
-                style={{
-                  fontSize: 12,
-                  color: "var(--color-ink-soft)",
-                  marginBottom: 4,
-                }}
-              >
-                Glucose
-              </p>
-              <p style={{ fontSize: 20, fontWeight: 700 }}>
-                {Number(vitals.blood_glucose)} mg/dL
-              </p>
-            </div>
+                <p className="vital-value">
+                  {tile.value}
+                  {tile.unit && <span className="vital-unit">{tile.unit}</span>}
+                </p>
+              </div>
+            ))}
           </div>
         )}
       </div>
@@ -584,43 +561,47 @@ export default function PatientDashboard() {
       ========================================== */}
 
       <div className="card">
-        <h3 style={{ marginBottom: 16 }}>Appointments</h3>
+        <h3 className="card-title">Appointments</h3>
 
-        <table>
-          <thead>
-            <tr>
-              <th>Doctor</th>
-              <th>Specialization</th>
-              <th>Date</th>
-              <th>Time</th>
-              <th>Status</th>
-            </tr>
-          </thead>
+        {appointments.length === 0 ? (
+          <p className="empty-note">
+            No appointments yet. Book one with your matched doctor.
+          </p>
+        ) : (
+          <div className="table-scroll">
+            <table>
+              <thead>
+                <tr>
+                  <th>Doctor</th>
+                  <th>Specialization</th>
+                  <th>Date</th>
+                  <th>Time</th>
+                  <th>Status</th>
+                </tr>
+              </thead>
 
-          <tbody>
-            {appointments.map((appt) => (
-              <tr key={appt.id}>
-                <td>{appt.doctor}</td>
+              <tbody>
+                {appointments.map((appt) => (
+                  <tr key={appt.id}>
+                    <td>{appt.doctor}</td>
 
-                <td>{appt.specialization}</td>
+                    <td>{appt.specialization}</td>
 
-                <td>{appt.date}</td>
+                    <td>{appt.date}</td>
 
-                <td>{formatTime(appt.time)}</td>
+                    <td>{formatTime(appt.time)}</td>
 
-                <td>
-                  <span
-                    className={`badge ${
-                      appt.status === "Completed" ? "badge-low" : "badge-medium"
-                    }`}
-                  >
-                    {appt.status}
-                  </span>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+                    <td>
+                      <span className={`badge ${statusClass(appt.status)}`}>
+                        {statusLabel(appt.status)}
+                      </span>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
       </div>
 
       {/* ==========================================
@@ -628,10 +609,126 @@ export default function PatientDashboard() {
       ========================================== */}
 
       <style>{`
+        .dash-block {
+          margin-bottom: 20px;
+        }
+
+        .card-title {
+          margin-bottom: 14px;
+          font-size: 17px;
+        }
+
+        .empty-note {
+          margin: 0;
+          font-size: 14px;
+          color: var(--color-ink-soft);
+        }
+
+        .small-note {
+          margin: 0;
+          font-size: 13px;
+          color: var(--color-ink-soft);
+        }
+
+        .success-note {
+          margin: 14px 0 0;
+          font-size: 13px;
+          font-weight: 600;
+          color: var(--color-success);
+        }
+
+        .risk-row {
+          display: flex;
+          align-items: center;
+          flex-wrap: wrap;
+          gap: 10px;
+          margin-bottom: 10px;
+        }
+
+        .risk-score {
+          font-size: 14px;
+          color: var(--color-ink-soft);
+        }
+
+        .condition-line {
+          margin: 0 0 4px;
+          font-size: 15px;
+        }
+
+        .doctor-name {
+          margin: 0 0 4px;
+          font-size: 16px;
+          font-weight: 700;
+        }
+
+        .doctor-meta {
+          margin: 0 0 14px;
+          font-size: 14px;
+          color: var(--color-ink-soft);
+        }
+
+        .doctor-actions {
+          display: flex;
+          align-items: center;
+          flex-wrap: wrap;
+          gap: 10px;
+        }
+
         .booking-form {
           margin-top: 16px;
           padding-top: 16px;
           border-top: 1px solid var(--color-line);
+        }
+
+        .booking-actions {
+          display: flex;
+          flex-wrap: wrap;
+          gap: 10px;
+        }
+
+        .booking-actions .btn:disabled {
+          opacity: 0.7;
+          cursor: not-allowed;
+        }
+
+        .vitals-grid {
+          display: grid;
+          grid-template-columns: repeat(3, minmax(0, 1fr));
+          gap: 12px;
+        }
+
+        .vital-tile {
+          background: var(--color-bg);
+          border: 1px solid var(--color-line);
+          border-radius: var(--radius-sm);
+          padding: 14px 16px;
+        }
+
+        .vital-label {
+          margin: 0 0 4px;
+          font-size: 12px;
+          color: var(--color-ink-soft);
+        }
+
+        .vital-value {
+          margin: 0;
+          font-family: var(--font-display);
+          font-size: 22px;
+          font-weight: 800;
+        }
+
+        .vital-unit {
+          margin-left: 4px;
+          font-family: var(--font-body);
+          font-size: 12px;
+          font-weight: 600;
+          color: var(--color-ink-soft);
+        }
+
+        @media (max-width: 600px) {
+          .vitals-grid {
+            grid-template-columns: 1fr;
+          }
         }
       `}</style>
     </div>

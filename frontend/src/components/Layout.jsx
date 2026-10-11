@@ -8,7 +8,7 @@ export default function Layout() {
       <Sidebar />
 
       <main className="main-content">
-        <div className="global-topbar">
+        <div className="topbar-float">
           <ProfileMenu />
         </div>
 

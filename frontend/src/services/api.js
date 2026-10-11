@@ -1,31 +1,43 @@
 const API_BASE_URL = "https://smartcare-hms-backend.vercel.app/api";
 
-// Generic request helper — handles JSON, errors, and auth headers
+// ==================================================
+// GENERIC REQUEST HELPER
+// ==================================================
+
 async function request(endpoint, { method = "GET", body, token } = {}) {
   const headers = {
     "Content-Type": "application/json",
   };
 
   if (token) {
-    headers["Authorization"] = `Bearer ${token}`;
+    headers.Authorization = `Bearer ${token}`;
   }
 
   const response = await fetch(`${API_BASE_URL}${endpoint}`, {
     method,
     headers,
-    body: body ? JSON.stringify(body) : undefined,
+    body: body !== undefined ? JSON.stringify(body) : undefined,
   });
 
-  const data = await response.json();
+  let data;
+
+  try {
+    data = await response.json();
+  } catch {
+    throw new Error("The server returned an invalid response.");
+  }
 
   if (!response.ok || data.success === false) {
-    throw new Error(data.message || "Something went wrong");
+    throw new Error(data.message || "Something went wrong.");
   }
 
   return data;
 }
 
-// ---- Auth ----
+// ==================================================
+// PATIENT / DOCTOR AUTHENTICATION
+// ==================================================
+
 export function sendOtp({ email }) {
   return request("/auth/send-otp", {
     method: "POST",
@@ -47,7 +59,10 @@ export function loginUser({ email, password }) {
   });
 }
 
-// ---- Auth storage (localStorage) ----
+// ==================================================
+// PATIENT / DOCTOR SESSION STORAGE
+// ==================================================
+
 const TOKEN_KEY = "smartcare_token";
 const USER_KEY = "smartcare_user";
 
@@ -62,15 +77,90 @@ export function getToken() {
 
 export function getCurrentUser() {
   const raw = localStorage.getItem(USER_KEY);
-  return raw ? JSON.parse(raw) : null;
+
+  try {
+    return raw ? JSON.parse(raw) : null;
+  } catch {
+    return null;
+  }
 }
 
-// ---- Patient ----
+export function logout() {
+  localStorage.removeItem(TOKEN_KEY);
+  localStorage.removeItem(USER_KEY);
+}
+
+// ==================================================
+// ADMIN AUTHENTICATION
+// Uses the existing POST /auth/login endpoint.
+// ==================================================
+
+const ADMIN_TOKEN_KEY = "smartcare_admin_token";
+const ADMIN_USER_KEY = "smartcare_admin_user";
+
+export async function loginAdmin({ email, password }) {
+  const response = await request("/auth/login", {
+    method: "POST",
+    body: { email, password },
+  });
+
+  // Only accept an ADMIN account in the admin portal.
+  if (response.user?.role !== "ADMIN" || !response.token) {
+    throw new Error("This account does not have admin access.");
+  }
+
+  return response;
+}
+
+export function saveAdminAuth({ token, user }) {
+  if (!token || user?.role !== "ADMIN") {
+    throw new Error("Cannot save an invalid admin session.");
+  }
+
+  localStorage.setItem(ADMIN_TOKEN_KEY, token);
+  localStorage.setItem(ADMIN_USER_KEY, JSON.stringify(user));
+}
+
+export function getAdminToken() {
+  return localStorage.getItem(ADMIN_TOKEN_KEY);
+}
+
+export function getCurrentAdmin() {
+  const raw = localStorage.getItem(ADMIN_USER_KEY);
+
+  try {
+    return raw ? JSON.parse(raw) : null;
+  } catch {
+    return null;
+  }
+}
+
+export function logoutAdmin() {
+  localStorage.removeItem(ADMIN_TOKEN_KEY);
+  localStorage.removeItem(ADMIN_USER_KEY);
+}
+
+// Use the admin token for admin-only API requests.
+function getRequiredAdminToken() {
+  const admin = getCurrentAdmin();
+  const token = getAdminToken();
+
+  if (!token || admin?.role !== "ADMIN") {
+    throw new Error("Please sign in with an admin account.");
+  }
+
+  return token;
+}
+
+// ==================================================
+// PATIENT APIs
+// ==================================================
+
 export function getMyPatient() {
   const token = getToken();
 
   if (!token) {
-    throw new Error("Authentication token not found");
+    throw new Error("Authentication token not found.");
   }
 
   return request("/patients/me", {
@@ -79,12 +169,15 @@ export function getMyPatient() {
   });
 }
 
-// ---- AI / Vitals ----
+// ==================================================
+// AI / VITALS APIs
+// ==================================================
+
 export function getMyLatestVitals() {
   const token = getToken();
 
   if (!token) {
-    throw new Error("Authentication token not found");
+    throw new Error("Authentication token not found.");
   }
 
   return request("/ai/vitals/me", {
@@ -97,7 +190,7 @@ export function getMyPredictions() {
   const token = getToken();
 
   if (!token) {
-    throw new Error("Authentication token not found");
+    throw new Error("Authentication token not found.");
   }
 
   return request("/ai/my-predictions", {
@@ -106,7 +199,10 @@ export function getMyPredictions() {
   });
 }
 
-// ---- Doctors ----
+// ==================================================
+// DOCTOR APIs
+// ==================================================
+
 export function getAllDoctors() {
   const token = getToken();
 
@@ -116,7 +212,10 @@ export function getAllDoctors() {
   });
 }
 
-// ---- Appointments ----
+// ==================================================
+// APPOINTMENT APIs
+// ==================================================
+
 export function createAppointment({
   appointment_code,
   patient_id,
@@ -128,7 +227,7 @@ export function createAppointment({
   const token = getToken();
 
   if (!token) {
-    throw new Error("Authentication token not found");
+    throw new Error("Authentication token not found.");
   }
 
   return request("/appointments", {
@@ -149,7 +248,7 @@ export function getPatientAppointments(patientId) {
   const token = getToken();
 
   if (!token) {
-    throw new Error("Authentication token not found");
+    throw new Error("Authentication token not found.");
   }
 
   return request(`/appointments/patient/${patientId}`, {
@@ -158,11 +257,15 @@ export function getPatientAppointments(patientId) {
   });
 }
 
+// ==================================================
+// PROFILE APIs
+// ==================================================
+
 export function getMyProfile() {
   const token = getToken();
 
   if (!token) {
-    throw new Error("Authentication token not found");
+    throw new Error("Authentication token not found.");
   }
 
   return request("/users/profile", {
@@ -175,7 +278,7 @@ export function updateMyProfile(profileData) {
   const token = getToken();
 
   if (!token) {
-    throw new Error("Authentication token not found");
+    throw new Error("Authentication token not found.");
   }
 
   return request("/users/profile", {
@@ -185,79 +288,49 @@ export function updateMyProfile(profileData) {
   });
 }
 
-// ---- Reviews ----
+// ==================================================
+// REVIEW APIs
+// ==================================================
 
-// Get publicly approved reviews
 export function getPublicReviews() {
   return request("/reviews", {
     method: "GET",
   });
 }
 
-// Submit a review - PATIENT / DOCTOR
 export function submitReview({ rating, review }) {
   const token = getToken();
 
   if (!token) {
-    throw new Error("Authentication token not found");
+    throw new Error("Authentication token not found.");
   }
 
   return request("/reviews", {
     method: "POST",
     token,
-    body: {
-      rating,
-      review,
-    },
+    body: { rating, review },
   });
 }
 
-// Get all reviews - ADMIN
+// Admin review management
 export function getAdminReviews() {
-  const token = getToken();
-
-  if (!token) {
-    throw new Error("Authentication token not found");
-  }
-
   return request("/reviews/admin", {
     method: "GET",
-    token,
+    token: getRequiredAdminToken(),
   });
 }
 
-// Approve / reject review - ADMIN
 export function updateReviewStatus(reviewId, status) {
-  const token = getToken();
-
-  if (!token) {
-    throw new Error("Authentication token not found");
-  }
-
   return request(`/reviews/admin/${reviewId}/status`, {
     method: "PATCH",
-    token,
-    body: {
-      status,
-    },
+    token: getRequiredAdminToken(),
+    body: { status },
   });
 }
 
-// Delete review - ADMIN
 export function deleteReview(reviewId) {
-  const token = getToken();
-
-  if (!token) {
-    throw new Error("Authentication token not found");
-  }
-
   return request(`/reviews/admin/${reviewId}`, {
     method: "DELETE",
-    token,
+    token: getRequiredAdminToken(),
   });
-}
-
-export function logout() {
-  localStorage.removeItem(TOKEN_KEY);
-  localStorage.removeItem(USER_KEY);
 }

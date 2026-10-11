@@ -8,6 +8,7 @@ import HealthProfile from "./pages/HealthProfile.jsx";
 import PatientDashboard from "./pages/PatientDashboard.jsx";
 import DoctorDashboard from "./pages/DoctorDashboard.jsx";
 import AdminDashboard from "./pages/AdminDashboard.jsx";
+import AdminLogin from "./pages/AdminLogin.jsx";
 
 export default function App() {
   return (
@@ -16,6 +17,7 @@ export default function App() {
       <Route path="/" element={<Home />} />
       <Route path="/login" element={<Login />} />
       <Route path="/register" element={<Register />} />
+      <Route path="/admin/login" element={<AdminLogin />} />
 
       {/* App pages: wrapped in Layout (sidebar + content area) */}
       <Route element={<Layout />}>

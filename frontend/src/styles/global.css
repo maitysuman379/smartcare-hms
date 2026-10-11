@@ -770,3 +770,113 @@ tr:last-child td { border-bottom: none; }
 .reviews-more-btn:active {
   transform: translateY(1px);
 }
+
+/* =====================================================
+   FLOATING PROFILE MENU — no longer takes its own row
+===================================================== */
+
+.main-content {
+  position: relative;
+}
+
+.topbar-float {
+  position: absolute;
+  top: 16px;
+  right: 24px;
+  z-index: 40;
+}
+
+@media (max-width: 900px) {
+  .topbar-float {
+    top: 10px;
+    right: 14px;
+  }
+}
+
+
+.admin-auth-page {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  background: #f1f5f9;
+  box-sizing: border-box;
+}
+
+.admin-auth-card {
+  width: 100%;
+  max-width: 420px;
+  padding: 36px;
+  border: 1px solid #e2e8f0;
+  border-radius: 18px;
+  background: #ffffff;
+  box-shadow: 0 12px 35px rgba(15, 23, 42, 0.08);
+  box-sizing: border-box;
+}
+
+.admin-auth-icon {
+  width: 52px;
+  height: 52px;
+  display: grid;
+  place-items: center;
+  margin-bottom: 20px;
+  border-radius: 14px;
+  background: #dbeafe;
+  color: #1d4ed8;
+  font-size: 28px;
+}
+
+.admin-auth-card h1 {
+  margin: 0 0 8px;
+  color: #0f172a;
+  font-size: 28px;
+}
+
+.admin-auth-card > p {
+  margin: 0 0 24px;
+  color: #64748b;
+}
+
+.admin-auth-card form {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.admin-auth-card label {
+  color: #334155;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.admin-auth-card input {
+  width: 100%;
+  padding: 12px;
+  border: 1px solid #cbd5e1;
+  border-radius: 9px;
+  font: inherit;
+  box-sizing: border-box;
+}
+
+.admin-auth-card input:focus {
+  outline: 2px solid #93c5fd;
+  border-color: #2563eb;
+}
+
+.admin-auth-card button {
+  margin-top: 12px;
+  padding: 13px;
+  border: none;
+  border-radius: 9px;
+  background: #1d4ed8;
+  color: #ffffff;
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.admin-auth-card button:disabled {
+  opacity: 0.65;
+  cursor: wait;
+}
