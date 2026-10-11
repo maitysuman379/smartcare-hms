@@ -4,6 +4,7 @@ import {
   allPatientsOverview,
   appointments as initialAppointments,
 } from "../services/mockData.js";
+import DoctorApplications from "../components/admin/DoctorApplications.jsx";
 
 const emptyDoctorForm = {
   name: "",
@@ -179,6 +180,9 @@ export default function AdminDashboard() {
           <p style={{ fontSize: 26, fontWeight: 800 }}>{appointments.length}</p>
         </div>
       </div>
+
+      {/* Doctor Applications */}
+      <DoctorApplications />
 
       {/* Doctor management */}
       <div className="card" style={{ marginBottom: 20 }}>

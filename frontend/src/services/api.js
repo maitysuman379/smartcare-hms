@@ -334,3 +334,44 @@ export function deleteReview(reviewId) {
     token: getRequiredAdminToken(),
   });
 }
+
+/* ==================================================
+   ADMIN DOCTOR APPLICATION APIs
+================================================== */
+
+export function getDoctorRequests() {
+  return request("/admin/doctor-requests", {
+    method: "GET",
+    token: getRequiredAdminToken(),
+  });
+}
+
+export function getDoctorRequestById(applicationId) {
+  return request(`/admin/doctor-requests/${applicationId}`, {
+    method: "GET",
+    token: getRequiredAdminToken(),
+  });
+}
+
+export function reviewDoctorRequest(applicationId) {
+  return request(`/admin/doctor-requests/${applicationId}/review`, {
+    method: "PATCH",
+    token: getRequiredAdminToken(),
+  });
+}
+
+export function approveDoctorRequest(applicationId) {
+  return request(`/admin/doctor-requests/${applicationId}/approve`, {
+    method: "PATCH",
+    token: getRequiredAdminToken(),
+    body: { documentsVerified: true },
+  });
+}
+
+export function rejectDoctorRequest(applicationId, reason) {
+  return request(`/admin/doctor-requests/${applicationId}/reject`, {
+    method: "PATCH",
+    token: getRequiredAdminToken(),
+    body: { reason },
+  });
+}
